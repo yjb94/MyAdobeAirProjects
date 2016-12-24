@@ -1,0 +1,330 @@
+package Page.Login
+{
+	import com.thanksmister.touchlist.controls.TouchList;
+	import com.thanksmister.touchlist.renderers.DisplayObjectItemRenderer;
+	import com.thanksmister.touchlist.renderers.SpaceItemRenderer;
+	
+	import flash.display.Bitmap;
+	import flash.display.SimpleButton;
+	import flash.display.Sprite;
+	import flash.events.Event;
+	import flash.events.MouseEvent;
+	import flash.events.TimerEvent;
+	import flash.text.AntiAliasType;
+	import flash.text.TextField;
+	import flash.text.TextFieldType;
+	import flash.text.TextFormat;
+	import flash.text.TextFormatAlign;
+	import flash.utils.Timer;
+	import flash.utils.getTimer;
+	
+	import Page.BasePage;
+	
+	public class Join3 extends BasePage
+	{
+		[Embed(source = "assets/top_menu/button_prev.png")]
+		private static const BUTTON_PREV:Class;
+		[Embed(source = "assets/top_menu/button_prev_on.png")]
+		private static const BUTTON_PREV_ON:Class;
+		
+		[Embed(source = "assets/page/login/join3/title3.png")]
+		private static const TITLE:Class;
+		
+		[Embed(source = "assets/page/login/join3/status3.png")]
+		private static const STATUS:Class;
+		
+		[Embed(source = "assets/page/login/join2/join2_code.png")]
+		private static const Join2_code:Class;
+		[Embed(source = "assets/page/login/join2/join2_blank.png")]
+		private static const Join2_blank:Class;
+		[Embed(source = "assets/page/login/join2/join2_2.png")]
+		private static const Join2_2:Class;
+		[Embed(source = "assets/page/login/join2/join2_3.png")]
+		private static const Join2_3:Class;
+		[Embed(source = "assets/page/login/join3/join3_1.png")]
+		private static const Join3_1:Class;
+		[Embed(source = "assets/page/login/join3/join3_send.png")]
+		private static const Join3_send:Class;
+		[Embed(source = "assets/page/login/join3/join3_send_on.png")]
+		private static const Join3_send_on:Class;
+		[Embed(source = "assets/page/login/join3/join3_2.png")]
+		private static const Join3_2:Class;
+		
+		private var _listSprite:Vector.<Sprite>;
+		
+		private var _touchList:TouchList;
+		
+		private var _textRemainTime:TextField;
+		private var _remainTimer:Timer;
+		private var _remainTime:Number;
+		private var _remainTimeTick:Number;
+		
+		public function Join3()
+		{
+			super();
+			
+			Elever.Main.TopMenu.clearAddedChild();
+			
+			var bmpTitle:Bitmap=new TITLE;
+			bmpTitle.smoothing=true;
+			Elever.Main.TopMenu.Title=bmpTitle;
+			
+			var buttonPrev:Bitmap=new BUTTON_PREV;
+			buttonPrev.smoothing=true;
+			var buttonPrevOn:Bitmap=new BUTTON_PREV_ON;
+			buttonPrevOn.smoothing=true;
+			Elever.Main.TopMenu.LeftButton=new SimpleButton(buttonPrev,buttonPrev,buttonPrevOn,buttonPrev);
+			Elever.Main.TopMenu.LeftButton.addEventListener(MouseEvent.CLICK,prev_onClick);
+			
+			var status:Bitmap=new STATUS;
+			status.smoothing=true;
+			status.y=Elever.Main.TopMenu.Background.height-7;
+			Elever.Main.TopMenu.addChild(status);
+			
+			var txt:TextField,fmt:TextFormat,btn:SimpleButton;
+			var code:Bitmap,blank:Bitmap;
+			
+			_listSprite=new Vector.<Sprite>(8,true);
+			
+			_listSprite[0]=new Sprite;
+			_listSprite[0].graphics.beginFill(0x000000,0);
+			_listSprite[0].graphics.drawRect(0,0,432,1);
+			_listSprite[0].graphics.endFill();
+			//_listSprite[0].addChild(new Join2_1);
+			
+			_listSprite[1]=new Sprite;
+			var join2_2:Bitmap=new Join2_2;
+			Join2_2.smoothing=true;
+			_listSprite[1].addChild(join2_2);
+			
+			_listSprite[2]=new Sprite;
+			var userPhoneNum:String=Elever.UserInfo.user_phonenum;
+			var userPhoneCode:String=userPhoneNum.substr(0,userPhoneNum.indexOf(" "));
+			userPhoneNum=userPhoneNum.substr(userPhoneNum.indexOf(" ")+1);
+			with(_listSprite[2]){
+				code=new Join2_code;
+				addChild(code);
+				
+				//user_phone_code
+				txt=new TextField;
+				txt.type=TextFieldType.DYNAMIC;
+				txt.selectable=false;
+				txt.width=code.width-4; txt.height=code.height*0.6; txt.x=code.x+code.width/2-txt.width/2; txt.y=code.y+code.height/2-txt.height/2;
+				fmt=txt.defaultTextFormat; fmt.size=txt.height/1.2; fmt.color=0xFFFFFF; fmt.align=TextFormatAlign.CENTER; fmt.font="Main"; txt.defaultTextFormat=fmt;
+				txt.antiAliasType=AntiAliasType.ADVANCED;
+				txt.embedFonts=true;
+				txt.text=userPhoneCode;
+				addChild(txt);
+				
+				blank=new Join2_blank;
+				blank.x=code.x+code.width+10;
+				addChild(blank);
+				
+				//user_phone_number
+				txt=new TextField;
+				txt.type=TextFieldType.DYNAMIC;
+				txt.selectable=false;
+				txt.width=blank.width-4; txt.height=blank.height*0.6; txt.x=blank.x+blank.width/2-txt.width/2; txt.y=blank.y+blank.height/2-txt.height/2;
+				fmt=txt.defaultTextFormat; fmt.size=txt.height/1.2; fmt.color=0x000000; fmt.align=TextFormatAlign.CENTER; fmt.font="Main"; txt.defaultTextFormat=fmt;
+				txt.antiAliasType=AntiAliasType.ADVANCED;
+				txt.embedFonts=true;
+				txt.text=userPhoneNum;
+				if(userPhoneCode=="+82") txt.text="0"+txt.text;
+				addChild(txt);
+			}
+			
+			_listSprite[3]=new Sprite;
+			var join2_3:Bitmap=new Join2_3;
+			join2_3.smoothing=true;
+			_listSprite[3].addChild(join2_3);
+			
+			
+			_listSprite[4]=new Sprite;
+			var couplePhoneNum:String=Elever.UserInfo.couple_user_phonenum;
+			var couplePhoneCode:String=couplePhoneNum.substr(0,couplePhoneNum.indexOf(" "));
+			couplePhoneNum=couplePhoneNum.substr(couplePhoneNum.indexOf(" ")+1);
+			with(_listSprite[4]){
+				code=new Join2_code;
+				addChild(code);
+				
+				//user_phone_code
+				txt=new TextField;
+				txt.type=TextFieldType.DYNAMIC;
+				txt.selectable=false;
+				txt.width=code.width-4; txt.height=code.height*0.6; txt.x=code.x+code.width/2-txt.width/2; txt.y=code.y+code.height/2-txt.height/2;
+				fmt=txt.defaultTextFormat; fmt.size=txt.height/1.2; fmt.color=0xFFFFFF; fmt.align=TextFormatAlign.CENTER; fmt.font="Main"; txt.defaultTextFormat=fmt;
+				txt.antiAliasType=AntiAliasType.ADVANCED;
+				txt.embedFonts=true;
+				txt.text=couplePhoneCode;
+				addChild(txt);
+				
+				blank=new Join2_blank;
+				blank.x=code.x+code.width+10;
+				addChild(blank);
+				
+				//user_phone_number
+				txt=new TextField;
+				txt.type=TextFieldType.DYNAMIC;
+				txt.selectable=false;
+				txt.width=blank.width-4; txt.height=blank.height*0.6; txt.x=blank.x+blank.width/2-txt.width/2; txt.y=blank.y+blank.height/2-txt.height/2;
+				fmt=txt.defaultTextFormat; fmt.size=txt.height/1.2; fmt.color=0x000000; fmt.align=TextFormatAlign.CENTER; fmt.font="Main"; txt.defaultTextFormat=fmt;
+				txt.antiAliasType=AntiAliasType.ADVANCED;
+				txt.embedFonts=true;
+				txt.text=couplePhoneNum;
+				if(couplePhoneCode=="+82") txt.text="0"+txt.text;
+				addChild(txt);
+			}			
+			
+			
+			_listSprite[5]=new Sprite;
+			var join3_1:Bitmap=new Join3_1;
+			join3_1.smoothing=true;
+			_listSprite[5].addChild(join3_1);
+			
+			
+			_listSprite[6]=new Sprite;
+			var bmpSend:Bitmap=new Join3_send;
+			bmpSend.smoothing=true;
+			var bmpSendOn:Bitmap=new Join3_send_on;
+			bmpSendOn.smoothing=true;
+			with(_listSprite[6]){
+				btn=new SimpleButton(bmpSend,bmpSend,bmpSendOn,bmpSend);
+				btn.addEventListener(MouseEvent.CLICK,send_onClick);
+				addChild(btn);
+			}
+			
+			
+			_listSprite[7]=new Sprite;
+			var join3_2:Bitmap=new Join3_2;
+			join3_2.smoothing=true;
+			_listSprite[7].addChild(join3_2);
+			
+			_textRemainTime=new TextField;
+			txt=_textRemainTime;
+			txt.type=TextFieldType.DYNAMIC;
+			txt.selectable=false;
+			txt.width=168; txt.height=31; txt.x=255; txt.y=64;
+			fmt=txt.defaultTextFormat; fmt.size=txt.height/1.2; fmt.color=0x595959; fmt.align=TextFormatAlign.CENTER; fmt.font="Main"; txt.defaultTextFormat=fmt;
+			txt.antiAliasType=AntiAliasType.ADVANCED;
+			txt.embedFonts=true;
+			txt.text="";
+			_listSprite[7].addChild(txt);
+			_remainTime=parseInt(Elever.UserInfo.remain_time);
+			_remainTimeTick=getTimer();
+			printRemainTime();
+			_remainTimer=new Timer(500);
+			_remainTimer.addEventListener(TimerEvent.TIMER,remainTimer_onTick);
+			_remainTimer.start();
+			
+			
+			Elever.Main.TopMenuVisible=true;
+			Elever.Main.BottomMenuVisible=false;
+			
+			_touchList = new TouchList(Elever.Main.PageWidth,Elever.Main.PageHeight);
+			_touchList.addEventListener(Event.ADDED_TO_STAGE,touchList_onAdded);
+			addChild(_touchList);			
+			
+		}
+		
+		private function remainTimer_onTick(e:TimerEvent):void{
+			printRemainTime();
+		}
+		
+		private function printRemainTime():void{
+			var time:int=_remainTime-Math.floor((getTimer()-_remainTimeTick)/1000);
+			
+			if(time<=0){
+				time=0;
+			}
+			
+			var sec:int=(time%60);
+			var min:int=Math.floor(time/60)%60;
+			var hour:int=Math.floor(time/60/60);
+			
+			var result:String="";
+			
+			if(hour<10) result+="0";
+			result+=hour;
+			result+=":";
+			if(min<10) result+="0";
+			result+=min;
+			result+=":";
+			if(sec<10) result+="0";
+			result+=sec;
+			
+			_textRemainTime.text=result;
+		}
+		
+		private function touchList_onAdded(e:Event):void{
+			_touchList.removeListItems();
+			_touchList.resize(Elever.Main.PageWidth-5,Elever.Main.PageHeight);
+			for(var i:int = 0; i < _listSprite.length; i++) {
+				if(i==0 || i>4){
+					_listSprite[i].x=_touchList.width/2-_listSprite[i].width/2
+				}
+				else if(i==1 || i==3){
+					_listSprite[i].x=_listSprite[0].x-10;
+				}
+				else{
+					_listSprite[i].x=_listSprite[0].x;
+				}
+				
+				_touchList.addListItem(new DisplayObjectItemRenderer(_listSprite[i]));
+				
+				if(i==0) _touchList.addListItem(new SpaceItemRenderer(35));
+				else if(i==2)_touchList.addListItem(new SpaceItemRenderer(55));
+				else if (i==4) _touchList.addListItem(new SpaceItemRenderer(66));
+				else if (i==5) _touchList.addListItem(new SpaceItemRenderer(30));
+				else if (i==6) _touchList.addListItem(new SpaceItemRenderer(40));
+				else _touchList.addListItem(new SpaceItemRenderer(20));
+			}
+		}
+		
+		private function send_onClick(e:MouseEvent):void{
+			
+		}
+		
+		private function prev_onClick(e:MouseEvent):void{
+			Elever.Main.TopMenu.LeftButton.removeEventListener(MouseEvent.CLICK,prev_onClick);
+			
+			Elever.Account=null;
+			Elever.saveEnviroment();
+			
+			Elever.Main.setPage("eleverUserLoginPage",null,EleverPageEffect.RIGHT,EleverPageEffect.RIGHT);
+		}
+				
+		public override function dispose():void{
+			_remainTimer.stop();
+			_remainTimer=null;
+			
+			_touchList.removeListItems();
+			_touchList.removeEventListener(Event.ADDED_TO_STAGE,touchList_onAdded);
+			removeChild(_touchList);
+			_touchList=null;
+			
+			for(var i:int=0;i<_listSprite.length;i++){
+				while(_listSprite[i].numChildren>0){
+					if(_listSprite[i].getChildAt(0) is TextField){
+						var txt:TextField=_listSprite[i].getChildAt(0) as TextField;
+					}
+					else if(_listSprite[i].getChildAt(0) is SimpleButton){
+						var btn:SimpleButton=_listSprite[i].getChildAt(0) as SimpleButton;
+						btn.removeEventListener(MouseEvent.CLICK,send_onClick);
+					}
+					
+					_listSprite[i].removeChildAt(0);
+				}
+				if(_listSprite[i].parent)_listSprite[i].parent.removeChild(_listSprite[i]);
+				_listSprite[i]=null;
+			}
+			_listSprite.splice(0,_listSprite.length);
+			_listSprite=null;
+			
+			Elever.Main.TopMenu.LeftButton.removeEventListener(MouseEvent.CLICK,prev_onClick);
+		}
+		
+		public override function onResize():void{
+			_touchList.resize(Elever.Main.PageWidth-5,Elever.Main.PageHeight);
+		}
+	}
+}

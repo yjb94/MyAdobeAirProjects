@@ -1,0 +1,92 @@
+package Popup
+{
+	import flash.display.Bitmap;
+	import flash.display.SimpleButton;
+	import flash.display.Sprite;
+	import flash.events.MouseEvent;
+	import flash.text.AntiAliasType;
+	import flash.text.TextField;
+	import flash.text.TextFieldType;
+	import flash.text.TextFormat;
+	import flash.utils.setTimeout;
+	
+	import kr.pe.hs.ui.TabbedButton;
+
+	public class TermsPopup extends BasePopup
+	{
+		[Embed(source = "assets/page/login/join1/terms.png")]
+		private const TERMS:Class;
+		[Embed(source = "assets/page/login/join1/terms_agree.png")]
+		private const TERMS_AGREE:Class;
+		[Embed(source = "assets/page/login/join1/terms_agree_on.png")]
+		private const TERMS_AGREE_ON:Class;
+		
+		
+		private var _termsBg:Bitmap;
+		private var _txtTerms:TextField;
+		private var _buttonAgree:TabbedButton;
+		
+		private var _callback:Function;
+		
+		public function TermsPopup(callback:Function)
+		{
+			super();
+			
+			_termsBg=new TERMS;
+			_termsBg.smoothing=true;
+			addChild(_termsBg);
+			
+			_txtTerms=new TextField;
+			_txtTerms.type=TextFieldType.DYNAMIC;
+			var fmt:TextFormat=_txtTerms.defaultTextFormat;
+			fmt.font="Main";
+			fmt.size=20;
+			_txtTerms.defaultTextFormat=fmt;
+			_txtTerms.embedFonts=true;
+			_txtTerms.antiAliasType=AntiAliasType.ADVANCED;
+			_txtTerms.multiline=true;
+			_txtTerms.selectable=false;
+			_txtTerms.x=38;
+			_txtTerms.y=80;
+			_txtTerms.width=464;
+			_txtTerms.height=379;
+			_txtTerms.htmlText="어쩌구저쩌구한글<br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/>비트윈 망해라";
+			addChild(_txtTerms);
+			
+			var bmpAgree:Bitmap=new TERMS_AGREE;
+			bmpAgree.smoothing=true;
+			var bmpAgree_on:Bitmap=new TERMS_AGREE_ON;
+			bmpAgree_on.smoothing=true;
+			_buttonAgree=new TabbedButton(bmpAgree,bmpAgree_on,bmpAgree_on);
+			_buttonAgree.x=277;
+			_buttonAgree.y=488;
+			_buttonAgree.addEventListener(MouseEvent.CLICK,onAgree);
+			addChild(_buttonAgree);
+			
+			_callback=callback;
+		}
+		
+		private function onAgree(e:MouseEvent):void{
+			_buttonAgree.isTabbed=true;
+			Elever.Main.closePopup();
+			_callback();
+		}
+		
+		public override function onResize():void
+		{
+			
+		}
+		
+		public override function dispose():void
+		{
+			removeChild(_buttonAgree);
+			_buttonAgree=null;
+			
+			removeChild(_txtTerms);
+			_txtTerms=null;
+			
+			removeChild(_termsBg);
+			_termsBg=null;
+		}
+	}
+}

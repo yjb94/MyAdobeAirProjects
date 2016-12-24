@@ -1,0 +1,597 @@
+package Page.Calendar
+{
+	import com.thanksmister.touchlist.controls.TouchList;
+	import com.thanksmister.touchlist.renderers.DisplayObjectItemRenderer;
+	import com.thanksmister.touchlist.renderers.SpaceItemRenderer;
+	
+	import flash.display.Bitmap;
+	import flash.display.DisplayObject;
+	import flash.display.SimpleButton;
+	import flash.display.Sprite;
+	import flash.events.Event;
+	import flash.events.MouseEvent;
+	import flash.geom.Point;
+	import flash.net.URLVariables;
+	import flash.system.Capabilities;
+	import flash.text.AntiAliasType;
+	import flash.text.TextField;
+	import flash.text.TextFieldAutoSize;
+	import flash.text.TextFieldType;
+	import flash.text.TextFormat;
+	import flash.text.TextFormatAlign;
+	
+	import Page.BasePage;
+	
+	import kr.pe.hs.ui.TabbedButton;
+	
+	import pl.mateuszmackowiak.nativeANE.dialogs.NativeDatePickerDialog;
+	import pl.mateuszmackowiak.nativeANE.events.NativeDialogEvent;
+	
+	public class Add extends BasePage
+	{
+		[Embed(source = "assets/top_menu/button_prev.png")]
+		private const BUTTON_PREV:Class;
+		[Embed(source = "assets/top_menu/button_prev_on.png")]
+		private const BUTTON_PREV_ON:Class;
+		
+		[Embed(source = "assets/top_menu/button_check.png")]
+		private const BUTTON_CHECK:Class;
+		[Embed(source = "assets/top_menu/button_check_on.png")]
+		private const BUTTON_CHECK_ON:Class;
+		
+		[Embed(source = "assets/page/calendar/add/title.png")]
+		private const TITLE:Class;
+		
+		[Embed(source = "assets/page/calendar/add/add1.png")]
+		private const ADD1:Class;
+		
+		[Embed(source = "assets/page/calendar/add/add2.png")]
+		private const ADD2:Class;
+		
+		[Embed(source = "assets/page/calendar/add/add2_1.png")]
+		private const ADD2_1:Class;
+		
+		[Embed(source = "assets/page/calendar/add/add2_2.png")]
+		private const ADD2_2:Class;
+		
+		[Embed(source = "assets/page/calendar/add/add2_3.png")]
+		private const ADD2_3:Class;
+		
+		[Embed(source = "assets/page/calendar/add/add2_4.png")]
+		private const ADD2_4:Class;
+		
+		[Embed(source = "assets/page/calendar/add/add3.png")]
+		private const ADD3:Class;
+		
+		[Embed(source = "assets/page/calendar/add/add2_blank.png")]
+		private const ADD2_BLANK:Class;
+		
+		[Embed(source = "assets/page/calendar/add/add2_minus.png")]
+		private const ADD2_MINUS:Class;
+		
+		[Embed(source = "assets/page/calendar/add/add2_plus.png")]
+		private const ADD2_PLUS:Class;
+		
+		[Embed(source = "assets/page/calendar/add/add_spliter.png")]
+		private const ADD_SPLITER:Class;
+		
+		private var _bg:Sprite;
+		
+		private var _currentTarget:DisplayObject;
+		private var _keyboardHeight:Number;
+		private var _dialogHeight:Number;
+		
+		private var _listSprite:Vector.<Sprite>;
+		private var _touchList:TouchList;
+		
+		private var _buttonExtend:TabbedButton;
+		private var _lastHeightDesc:Number;
+		private var _textDesc:TextField;
+		private var _textStartDate:TextField;
+		private var _textEndDate:TextField;
+		
+		private var _stickerPicker:StickerPicker;
+		private var _colorPicker:ColorPicker;
+		
+		public function Add()
+		{
+			super();
+			
+			Elever.Main.TopMenu.clearAddedChild();
+			Elever.Main.TopMenuVisible=true;
+			Elever.Main.BottomMenuVisible=false;
+			//Elever.Main.BottomMenu.setCursor(BottomMenuSprite.CURSOR_CALENDAR);
+			
+			var bmpTitle:Bitmap=new TITLE;
+			bmpTitle.smoothing=true;
+			Elever.Main.TopMenu.Title=bmpTitle;
+			
+			var buttonPrev:Bitmap=new BUTTON_PREV;
+			buttonPrev.smoothing=true;
+			var buttonPrevOn:Bitmap=new BUTTON_PREV_ON;
+			buttonPrevOn.smoothing=true;
+			Elever.Main.TopMenu.LeftButton=new SimpleButton(buttonPrev,buttonPrev,buttonPrevOn,buttonPrev);
+			Elever.Main.TopMenu.LeftButton.addEventListener(MouseEvent.CLICK,prev_onClick);
+			
+			var buttonCheck:Bitmap=new BUTTON_CHECK;
+			buttonCheck.smoothing=true;
+			var buttonCheckOn:Bitmap=new BUTTON_CHECK_ON;
+			buttonCheckOn.smoothing=true;
+			Elever.Main.TopMenu.RightButton=new SimpleButton(buttonCheck,buttonCheck,buttonCheckOn,buttonCheck);
+			Elever.Main.TopMenu.RightButton.alpha=0.2;
+			Elever.Main.TopMenu.RightButton.addEventListener(MouseEvent.CLICK,submit_onClick);
+			
+			_bg=new Sprite;
+			_bg.graphics.beginFill(0xFFFFFF,0.5);
+			_bg.graphics.drawRect(0,0,100,100);
+			_bg.graphics.endFill();
+			_bg.cacheAsBitmap=true;
+			addChild(_bg);
+
+			
+			_keyboardHeight=0;
+			_dialogHeight=0;
+			
+			
+			var spliter:Bitmap;
+			
+			_listSprite=new Vector.<Sprite>(5,true);
+						
+			
+			_listSprite[0]=new Sprite;
+			
+			_listSprite[0].graphics.beginFill(0x000000,0);
+			_listSprite[0].graphics.drawRect(0,0,485,1);
+			_listSprite[0].graphics.endFill();
+			
+			var add2:Bitmap=new ADD2; add2.smoothing=true;
+			_listSprite[0].addChild(add2);
+			
+			var add2_1:Bitmap=new ADD2_1; add2_1.smoothing=true;
+			add2_1.name="add2_1";
+			add2_1.x=add2.x+36
+			add2_1.y=add2.y+add2.height+30;
+			_listSprite[0].addChild(add2_1);
+			
+			var add2_2:Bitmap=new ADD2_2; add2_2.smoothing=true;
+			add2_2.name="add2_2";
+			add2_2.x=add2.x+36
+			add2_2.y=add2.y+add2.height+30;
+			add2_2.visible=false;
+			_listSprite[0].addChild(add2_2);
+			
+			var add2_1_blank:Bitmap=new ADD2_BLANK; add2_1_blank.smoothing=true;
+			add2_1_blank.x=add2_1.x+add2_1.width+15;
+			add2_1_blank.y=add2_1.y+add2_1.height/2-add2_1_blank.height/2;
+			_listSprite[0].addChild(add2_1_blank);
+			
+			_textStartDate=new TextField;
+			_textStartDate.type=TextFieldType.DYNAMIC;
+			_textStartDate.width=add2_1_blank.width; _textStartDate.height=33; _textStartDate.x=add2_1_blank.x; _textStartDate.y=add2_1_blank.y+add2_1_blank.height/2-_textStartDate.height/2+3;
+			fmt=_textStartDate.defaultTextFormat; fmt.font="Main"; fmt.color=0xdd5858; fmt.size=_textStartDate.height/1.3; fmt.align=TextFormatAlign.CENTER; _textStartDate.defaultTextFormat=fmt;
+			_textStartDate.embedFonts=true;
+			_textStartDate.antiAliasType=AntiAliasType.ADVANCED;
+			//txt.addEventListener(FocusEvent.FOCUS_IN,birthday_onFocus);
+			_textStartDate.addEventListener(MouseEvent.CLICK,startDate_onFocus);
+			_listSprite[0].addChild(_textStartDate);
+			
+			var add2_plus:Bitmap=new ADD2_PLUS; add2_plus.smoothing=true;
+			var add2_minus:Bitmap=new ADD2_MINUS; add2_minus.smoothing=true;
+			_buttonExtend=new TabbedButton(add2_plus,add2_plus,add2_minus);
+			_buttonExtend.x=add2_1_blank.x+add2_1_blank.width+5;
+			_buttonExtend.y=add2_1_blank.y+add2_1_blank.height/2-add2_plus.height/2;
+			_buttonExtend.addEventListener(MouseEvent.CLICK,extend_onClick);
+			_listSprite[0].addChild(_buttonExtend);
+			
+			
+			
+			_listSprite[1]=new Sprite;
+			
+			var add1:Bitmap=new ADD1; add1.smoothing=true;
+			_listSprite[1].addChild(add1);
+			
+			_stickerPicker=new StickerPicker;
+			_stickerPicker.addEventListener(Event.CHANGE,sticker_onChange);
+			_stickerPicker.addEventListener(Event.RESIZE,sticker_onResize);
+			_stickerPicker.y=add1.y+add1.height+20;
+			_listSprite[1].addChild(_stickerPicker);
+			
+			
+			
+			_listSprite[2]=new Sprite;
+			
+			_listSprite[2].graphics.beginFill(0x000000,0);
+			_listSprite[2].graphics.drawRect(0,0,485,1);
+			_listSprite[2].graphics.endFill();
+			
+			var add2_3:Bitmap=new ADD2_3; add2_3.smoothing=true;
+			add2_3.x=36;
+			_listSprite[2].addChild(add2_3);
+			
+			var add2_3_blank:Bitmap=new ADD2_BLANK; add2_3_blank.smoothing=true;
+			add2_3_blank.x=add2_3.x+add2_3.width+15;
+			add2_3_blank.y=add2_3.y+add2_3.height/2-add2_3_blank.height/2;
+			_listSprite[2].addChild(add2_3_blank);
+			
+			_textEndDate=new TextField;
+			_textEndDate.type=TextFieldType.DYNAMIC;
+			_textEndDate.width=add2_3_blank.width; _textEndDate.height=33; _textEndDate.x=add2_3_blank.x; _textEndDate.y=add2_3_blank.y+add2_3_blank.height/2-_textEndDate.height/2+3;
+			fmt=_textEndDate.defaultTextFormat; fmt.font="Main"; fmt.color=0xdd5858; fmt.size=_textEndDate.height/1.3; fmt.align=TextFormatAlign.CENTER; _textEndDate.defaultTextFormat=fmt;
+			_textEndDate.embedFonts=true;
+			_textEndDate.antiAliasType=AntiAliasType.ADVANCED;
+			//txt.addEventListener(FocusEvent.FOCUS_IN,birthday_onFocus);
+			_textEndDate.addEventListener(MouseEvent.CLICK,endDate_onFocus);
+			_listSprite[2].addChild(_textEndDate);
+			
+			var add2_4:Bitmap=new ADD2_4; add2_4.smoothing=true;
+			add2_4.y=add2_3.y+add2_3.height+40;
+			_listSprite[2].addChild(add2_4);
+			
+			_colorPicker=new ColorPicker;
+			_colorPicker.addEventListener(Event.CHANGE,color_onChange);
+			_colorPicker.y=add2_4.y+add2_4.height+20;
+			_listSprite[2].addChild(_colorPicker);
+					
+			
+			_listSprite[3]=new Sprite;
+			spliter=new ADD_SPLITER; spliter.smoothing=true;
+			_listSprite[3].addChild(spliter);
+			
+			
+			
+			_listSprite[4]=new Sprite;
+			
+			_listSprite[4].graphics.beginFill(0x000000,0);
+			_listSprite[4].graphics.drawRect(0,0,485,1);
+			_listSprite[4].graphics.endFill();
+			
+			var add3:Bitmap=new ADD3; add3.smoothing=true;
+			_listSprite[4].addChild(add3);
+			
+			_textDesc=new TextField;
+			_textDesc.type=TextFieldType.INPUT;
+			var fmt:TextFormat=_textDesc.defaultTextFormat; fmt.font="Arial"; fmt.size=25; _textDesc.defaultTextFormat=fmt;
+			_textDesc.autoSize=TextFieldAutoSize.LEFT;
+			_textDesc.multiline=true;
+			_textDesc.wordWrap=true;
+			_textDesc.x=10;
+			_textDesc.y=add3.y+add3.height+30;
+			_textDesc.width=466;
+			_textDesc.height=303;
+			//_textDesc.embedFonts=true;
+			//_textDesc.antiAliasType=AntiAliasType.ADVANCED;
+			_textDesc.addEventListener(Event.CHANGE,desc_onChange);
+			_listSprite[4].addChild(_textDesc);
+			
+			_listSprite[4].graphics.beginFill(0xFFFFFF);
+			_listSprite[4].graphics.lineStyle(1,0x909191);
+			_listSprite[4].graphics.drawRoundRect(_textDesc.x-5,_textDesc.y-5,_textDesc.width+10,_textDesc.height+10,10,10);
+			_listSprite[4].graphics.lineStyle();
+			_listSprite[4].graphics.endFill();
+			_lastHeightDesc=_textDesc.height;
+			
+			
+			_touchList=new TouchList(Elever.Main.PageWidth,Elever.Main.PageHeight);
+			_touchList.addEventListener(Event.ADDED_TO_STAGE,touchList_onAdded);
+			addChild(_touchList);
+			
+			
+			
+			if(Elever.Main.PageParameters){
+				if(Elever.Main.PageParameters.ymd){
+					var ymd:String=Elever.Main.PageParameters.ymd;
+					var currentDate:Date=new Date(parseInt(ymd.substr(0,4)),parseInt(ymd.substr(4,2))-1,parseInt(ymd.substr(6,2)));
+					var dateArr:Array=[currentDate.fullYear.toString(),(currentDate.month+1).toString(),currentDate.date.toString()]
+					if(dateArr[1].length<2) dateArr[1]="0"+dateArr[1];
+					if(dateArr[2].length<2) dateArr[2]="0"+dateArr[2];
+					const dayOfWeekString:Vector.<String>=Vector.<String>(["SUN","MON","TUE","WED","THU","FRI","SAT"]);
+					var dateString:String=dateArr.join(". ")+" "+dayOfWeekString[currentDate.day];
+					
+					_textStartDate.text=dateString;
+				}					
+			}
+			
+		}
+		
+		private function touchList_onAdded(e:Event=null):void{
+			_touchList.removeListItems();
+			onResize();
+			_touchList.addListItem(new SpaceItemRenderer(20));
+			for(var i:int = 0; i < _listSprite.length; i++) {
+				if(i==1 && _buttonExtend.isTabbed) continue;
+				else if(i==2 && !_buttonExtend.isTabbed) continue;
+				
+				_listSprite[i].x=_touchList.width/2-_listSprite[i].width/2
+				_touchList.addListItem(new DisplayObjectItemRenderer(_listSprite[i]));
+				if(i!=2) _touchList.addListItem(new SpaceItemRenderer(20));
+			}
+		}
+		
+		public override function onResize():void{
+			_bg.width=Elever.Main.PageWidth;
+			_bg.height=Elever.Main.PageHeight;
+			
+			_touchList.resize(Elever.Main.PageWidth,Elever.Main.PageHeight-_keyboardHeight-_dialogHeight);
+		}
+		
+		public override function dispose():void{
+			Elever.Main.TopMenu.LeftButton.removeEventListener(MouseEvent.CLICK,prev_onClick);
+			Elever.Main.TopMenu.RightButton.removeEventListener(MouseEvent.CLICK,submit_onClick);
+			
+			_stickerPicker.removeEventListener(Event.CHANGE,sticker_onChange);
+			_stickerPicker.removeEventListener(Event.RESIZE,sticker_onResize);
+			_stickerPicker=null;
+			
+			_textStartDate.removeEventListener(MouseEvent.CLICK,startDate_onFocus);
+			_textStartDate=null;
+			
+			_buttonExtend.removeEventListener(MouseEvent.CLICK,extend_onClick);
+			_buttonExtend=null;
+			
+			_textEndDate.removeEventListener(MouseEvent.CLICK,endDate_onFocus);
+			_textEndDate=null;
+			
+			_colorPicker.removeEventListener(Event.CHANGE,color_onChange);
+			_colorPicker=null;
+			
+			_textDesc.removeEventListener(Event.CHANGE,desc_onChange);
+			_textDesc=null;
+			
+			_touchList.removeListItems();
+			_touchList.removeEventListener(Event.ADDED_TO_STAGE,touchList_onAdded);
+			removeChild(_touchList);
+			_touchList=null;
+			
+			removeChild(_bg);
+			_bg=null;			
+			
+			for(var i:int=0;i<_listSprite.length;i++){
+				while(_listSprite[i].numChildren>0) _listSprite[i].removeChildAt(0);
+				if(_listSprite[i].parent) _listSprite[i].parent.removeChild(_listSprite[i]);
+				_listSprite[i]=null;
+			}
+			_listSprite.splice(0,_listSprite.length);
+			_listSprite=null;
+		}
+		
+		private function checkNext():Boolean{
+			Elever.Main.TopMenu.RightButton.alpha=0.2;
+			
+			if(_textStartDate.text.length==0) return false;
+			if(_buttonExtend.isTabbed){
+				if(_textEndDate.text.length==0) return false;
+				
+				var startDate:Date,endDate:Date;
+				var strText:String,dateArr:Array;
+				
+				strText=_textStartDate.text.substr(0,_textStartDate.text.lastIndexOf(" "));
+				dateArr=strText.split(".");
+				if(dateArr.length==3){
+					startDate=new Date(parseInt(dateArr[0]),parseInt(dateArr[1])-1,parseInt(dateArr[2]));
+				}
+				
+				strText=_textEndDate.text.substr(0,_textEndDate.text.lastIndexOf(" "));
+				dateArr=strText.split(".");
+				if(dateArr.length==3){
+					endDate=new Date(parseInt(dateArr[0]),parseInt(dateArr[1])-1,parseInt(dateArr[2]));
+				}
+				
+				if(startDate==null || endDate==null) return false;
+				if(startDate>endDate) return false;				
+				
+				if(isNaN(_colorPicker.SelectedColor)) return false;
+			}
+			else{
+				if(_stickerPicker.SelectedSticker==null) return false;
+			}
+			if(_textDesc.text.length==0) return false;
+			
+			Elever.Main.TopMenu.RightButton.alpha=1;
+			return true;
+		}
+		
+		private function submit_onClick(e:MouseEvent):void{
+			if(checkNext()){
+				Elever.Main.LoadingVisible=true;
+				
+				var params:URLVariables=new URLVariables;
+				
+				params.user_seq=Elever.UserInfo.user_seq;
+				params.room_seq=Elever.UserInfo.room_seq;
+				params.calender_sdate=_textStartDate.text.substr(0,_textStartDate.text.lastIndexOf(" ")).replace(/. /g,"")
+				if(_buttonExtend.isTabbed){
+					params.calender_edate=_textEndDate.text.substr(0,_textEndDate.text.lastIndexOf(" ")).replace(/. /g,"");
+					params.color=_colorPicker.SelectedColor.toString(16);
+				}
+				else{
+					params.calender_edate=params.calender_sdate;
+					params.color="";
+				}
+				params.calendar_content=_textDesc.text;
+				params.couple_seeyn="0";
+				params.calendar_type="01";
+				params.item_seq=StickerPicker.Stickers.indexOf(_stickerPicker.SelectedSticker).toString();
+				
+				Elever.Connection.post("eleverCalendarScheduleRegAction.tiein",params,onRegComplete);
+			}
+			else{
+				new Alert("제대로 입력해주세염").show();
+			}
+		}
+		
+		private function onRegComplete(data:String):void{
+			Elever.Main.LoadingVisible=false;
+			
+			if(data){
+				var result:Object=JSON.parse(data);
+				
+				if(result.j_errorMsg.length>0){
+					new Alert(result.j_errorMsg).show();
+					return;
+				}
+								
+				Elever.Main.setPage("eleverCalendarPage");
+				return;
+			}
+			
+			new Alert("일정 생성 실패").show();
+		}
+		
+		private function prev_onClick(e:MouseEvent):void{
+			Elever.Main.setPage("eleverCalendarPage",null,EleverPageEffect.RIGHT,EleverPageEffect.RIGHT);
+		}
+		
+		private function sticker_onChange(e:Event):void{
+			checkNext();
+		}
+		private function sticker_onResize(e:Event):void{
+			touchList_onAdded();
+		}
+		private function color_onChange(e:Event):void{
+			checkNext();
+		}
+		
+		private function extend_onClick(e:MouseEvent):void{
+			_buttonExtend.isTabbed=!_buttonExtend.isTabbed;
+			_listSprite[0].getChildByName("add2_1").visible=!_buttonExtend.isTabbed;
+			_listSprite[0].getChildByName("add2_2").visible=_buttonExtend.isTabbed;
+			_textEndDate.text="";
+			_colorPicker.SelectedColor=NaN;
+			touchList_onAdded();
+		}
+		
+		private function startDate_onFocus(e:MouseEvent):void{
+			var txt:TextField=e.currentTarget as TextField;
+			var startPoint:Point=new Point(txt.width/2,txt.height/2);
+			startPoint=txt.localToGlobal(startPoint);
+			startPoint=Elever.Main.globalToLocal(startPoint);
+			
+			var curDate:Date=new Date;
+			var strText:String=txt.text.substr(0,txt.text.lastIndexOf(" "));
+			var dateArr:Array=strText.split(".");
+			if(dateArr.length==3){
+				curDate.setFullYear(parseInt(dateArr[0]),parseInt(dateArr[1])-1,parseInt(dateArr[2]));
+			}
+			
+			if(Capabilities.os.indexOf("Linux")==0){ //Android
+			}
+			else if(Capabilities.os.indexOf("iPhone")==0){ //iOS
+				_currentTarget=e.currentTarget as DisplayObject;
+				_dialogHeight=405;//480/Elever.Main.scaleY;
+				onResize();
+				_touchList.ScrollTop=_currentTarget.parent.parent.y+_currentTarget.y+_currentTarget.height/2-_touchList.ScrollArea/2;
+			}
+			
+			var dateDialog:NativeDatePickerDialog = new NativeDatePickerDialog();
+			dateDialog.addEventListener(NativeDialogEvent.CLOSED,startDate_onDialogClose);
+			//dateDialog.addEventListener(Event.CHANGE,onBirthday);
+			dateDialog.buttons = Vector.<String>(["확인"]);
+			dateDialog.displayMode =NativeDatePickerDialog.DISPLAY_MODE_DATE;
+			//dateDialog.title = "DatePicker";
+			//dateDialog.message = "Select date:";
+			dateDialog.date = curDate;
+			dateDialog.show(false);
+		}
+		
+		private function startDate_onDialogClose(e:NativeDialogEvent):void{
+			_currentTarget=null;
+			_dialogHeight=0;
+			onResize();
+			
+			var target:NativeDatePickerDialog = NativeDatePickerDialog(e.target);
+			target.removeEventListener(NativeDialogEvent.CLOSED,startDate_onDialogClose);
+			
+			var date:Date = target.date;
+			var dateArr:Array=[date.fullYear.toString(),(date.month+1).toString(),date.date.toString()]
+			if(dateArr[1].length<2) dateArr[1]="0"+dateArr[1];
+			if(dateArr[2].length<2) dateArr[2]="0"+dateArr[2];
+			
+			const dayOfWeekString:Vector.<String>=Vector.<String>(["SUN","MON","TUE","WED","THU","FRI","SAT"]);
+			_textStartDate.text=dateArr.join(". ")+" "+dayOfWeekString[date.day];
+			
+			checkNext();
+		}
+		
+		
+		private function endDate_onFocus(e:MouseEvent):void{			
+			var txt:TextField=e.currentTarget as TextField;
+			var startPoint:Point=new Point(txt.width/2,txt.height/2);
+			startPoint=txt.localToGlobal(startPoint);
+			startPoint=Elever.Main.globalToLocal(startPoint);
+			
+			var curDate:Date=new Date;
+			var strText:String=txt.text.substr(0,txt.text.lastIndexOf(" "));
+			var dateArr:Array=strText.split(".");
+			if(dateArr.length==3){
+				curDate.setFullYear(parseInt(dateArr[0]),parseInt(dateArr[1])-1,parseInt(dateArr[2]));
+			}
+			
+			if(Capabilities.os.indexOf("Linux")==0){ //Android
+			}
+			else if(Capabilities.os.indexOf("iPhone")==0){ //iOS
+				_currentTarget=e.currentTarget as DisplayObject;
+				_dialogHeight=405;//480/Elever.Main.scaleY;
+				onResize();
+				_touchList.ScrollTop=_currentTarget.parent.parent.y+_currentTarget.y+_currentTarget.height/2-_touchList.ScrollArea/2;
+			}
+			
+			var dateDialog:NativeDatePickerDialog = new NativeDatePickerDialog();
+			dateDialog.addEventListener(NativeDialogEvent.CLOSED,endDate_onDialogClose);
+			//dateDialog.addEventListener(Event.CHANGE,onBirthday);
+			dateDialog.buttons = Vector.<String>(["확인"]);
+			dateDialog.displayMode =NativeDatePickerDialog.DISPLAY_MODE_DATE;
+			//dateDialog.title = "DatePicker";
+			//dateDialog.message = "Select date:";
+			dateDialog.date = curDate; 
+			dateDialog.show(false);
+		}
+		
+		private function endDate_onDialogClose(e:NativeDialogEvent):void{
+			_currentTarget=null;
+			_dialogHeight=0;
+			onResize();
+			
+			var target:NativeDatePickerDialog = NativeDatePickerDialog(e.target);
+			target.removeEventListener(NativeDialogEvent.CLOSED,endDate_onDialogClose);
+			
+			var date:Date = target.date;
+			var dateArr:Array=[date.fullYear.toString(),(date.month+1).toString(),date.date.toString()]
+			if(dateArr[1].length<2) dateArr[1]="0"+dateArr[1];
+			if(dateArr[2].length<2) dateArr[2]="0"+dateArr[2];
+			
+			const dayOfWeekString:Vector.<String>=Vector.<String>(["SUN","MON","TUE","WED","THU","FRI","SAT"]);
+			_textEndDate.text=dateArr.join(". ")+" "+dayOfWeekString[date.day];
+			
+			checkNext();
+		}
+		
+		private function desc_onChange(e:Event):void{
+			checkNext();
+			
+			if(_lastHeightDesc==_textDesc.height) return;
+			
+			var sprite:Sprite=_textDesc.parent as Sprite;
+			
+			sprite.graphics.clear();
+			sprite.graphics.beginFill(0x000000,0);
+			sprite.graphics.drawRect(0,0,485,1);
+			sprite.graphics.endFill();
+			
+			sprite.graphics.beginFill(0xFFFFFF);
+			sprite.graphics.lineStyle(1,0x909191);
+			sprite.graphics.drawRoundRect(_textDesc.x-5,_textDesc.y-5,_textDesc.width+10,_textDesc.height+10,20,20);
+			sprite.graphics.lineStyle();
+			sprite.graphics.endFill();
+			
+			_lastHeightDesc=_textDesc.height;
+			
+			_touchList.removeListItemAt(_touchList.itemCount-1);
+			_touchList.removeListItemAt(_touchList.itemCount-1);
+			if(sprite.parent){
+				sprite.parent.removeChild(sprite);
+			}
+			_touchList.addListItem(new DisplayObjectItemRenderer(sprite));
+			_touchList.addListItem(new SpaceItemRenderer(20));
+		}
+	}
+}

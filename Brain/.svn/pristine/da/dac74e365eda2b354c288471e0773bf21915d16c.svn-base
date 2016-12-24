@@ -1,0 +1,437 @@
+package Page.Login
+{
+	import com.thanksmister.touchlist.controls.TouchList;
+	import com.thanksmister.touchlist.renderers.DisplayObjectItemRenderer;
+	import com.thanksmister.touchlist.renderers.SpaceItemRenderer;
+	
+	import flash.display.Bitmap;
+	import flash.display.DisplayObject;
+	import flash.display.SimpleButton;
+	import flash.display.Sprite;
+	import flash.events.Event;
+	import flash.events.MouseEvent;
+	import flash.events.SoftKeyboardEvent;
+	import flash.net.URLVariables;
+	import flash.text.SoftKeyboardType;
+	import flash.text.TextField;
+	import flash.text.TextFieldType;
+	import flash.text.TextFormat;
+	
+	import Page.BasePage;
+	
+	import Popup.PhoneBookPopup;
+	import Popup.PhoneCodePopup;
+	
+	import flashx.textLayout.formats.TextAlign;
+	
+	import kr.pe.hs.ui.AppTextField;
+	import kr.pe.hs.ui.TabbedButton;
+	
+	public class Join2 extends BasePage
+	{
+		[Embed(source = "assets/top_menu/button_prev.png")]
+		private static const BUTTON_PREV:Class;
+		[Embed(source = "assets/top_menu/button_prev_on.png")]
+		private static const BUTTON_PREV_ON:Class;
+		
+		[Embed(source = "assets/top_menu/button_next.png")]
+		private static const BUTTON_NEXT:Class;
+		[Embed(source = "assets/top_menu/button_next_on.png")]
+		private static const BUTTON_NEXT_ON:Class;
+		
+		[Embed(source = "assets/page/login/join2/title2.png")]
+		private static const TITLE:Class;
+		
+		[Embed(source = "assets/page/login/join2/status2.png")]
+		private static const STATUS:Class;
+		
+		[Embed(source = "assets/page/login/join2/join2_code.png")]
+		private static const Join2_code:Class;
+		[Embed(source = "assets/page/login/join2/join2_code_on.png")]
+		private static const Join2_code_on:Class;
+		[Embed(source = "assets/page/login/join2/join2_blank.png")]
+		private static const Join2_blank:Class;
+		[Embed(source = "assets/page/login/join2/join2_1.png")]
+		private static const Join2_1:Class;
+		[Embed(source = "assets/page/login/join2/join2_2.png")]
+		private static const Join2_2:Class;
+		[Embed(source = "assets/page/login/join2/join2_3.png")]
+		private static const Join2_3:Class;
+		[Embed(source = "assets/page/login/join2/join2_4.png")]
+		private static const Join2_4:Class;
+		
+		private var _listSprite:Vector.<Sprite>;
+				
+		private var _touchList:TouchList;
+		
+		private var _currentTarget:DisplayObject;
+		private var _keyboardHeight:Number;
+		
+		public function Join2()
+		{
+			super();
+			
+			Elever.Main.TopMenu.clearAddedChild();
+			
+			var bmpTitle:Bitmap=new TITLE;
+			bmpTitle.smoothing=true;
+			Elever.Main.TopMenu.Title=bmpTitle;
+			
+			var buttonPrev:Bitmap=new BUTTON_PREV;
+			buttonPrev.smoothing=true;
+			var buttonPrevOn:Bitmap=new BUTTON_PREV_ON;
+			buttonPrevOn.smoothing=true;
+			Elever.Main.TopMenu.LeftButton=new SimpleButton(buttonPrev,buttonPrev,buttonPrevOn,buttonPrev);
+			Elever.Main.TopMenu.LeftButton.addEventListener(MouseEvent.CLICK,prev_onClick);
+			
+			var buttonNext:Bitmap=new BUTTON_NEXT;
+			buttonNext.smoothing=true;
+			var buttonNextOn:Bitmap=new BUTTON_NEXT_ON;
+			buttonNextOn.smoothing=true;
+			Elever.Main.TopMenu.RightButton=new SimpleButton(buttonNext,buttonNext,buttonNextOn,buttonNext);
+			Elever.Main.TopMenu.RightButton.addEventListener(MouseEvent.CLICK,next_onClick);
+			
+			var status:Bitmap=new STATUS;
+			status.smoothing=true;
+			status.y=Elever.Main.TopMenu.Background.height-7;
+			Elever.Main.TopMenu.addChild(status);
+			
+			var txt:AppTextField,txtCode:TextField,fmt:TextFormat,btn:SimpleButton;
+			var buttonCode:TabbedButton,code:Bitmap,code_on:Bitmap,blank:Bitmap;
+			
+			_listSprite=new Vector.<Sprite>(6,true);
+			
+			_listSprite[0]=new Sprite;
+			var join2_1:Bitmap=new Join2_1;
+			join2_1.smoothing=true;
+			_listSprite[0].addChild(join2_1);
+			
+			_listSprite[1]=new Sprite;
+			var join2_2:Bitmap=new Join2_2;
+			join2_2.smoothing=true;
+			_listSprite[1].addChild(join2_2);
+			
+			
+			_listSprite[2]=new Sprite;
+				
+			code=new Join2_code;
+			code.smoothing=true;
+			code_on=new Join2_code_on;
+			code_on.smoothing=true;
+			buttonCode=new TabbedButton(code,code_on,code_on);
+			buttonCode.addEventListener(MouseEvent.CLICK,userCode_onClick);
+			_listSprite[2].addChild(buttonCode);
+			
+			//user_phone_code
+			txtCode=new TextField;
+			txtCode.type=TextFieldType.DYNAMIC;
+			txtCode.selectable=false;
+			txtCode.multiline=false;
+			txtCode.mouseEnabled=false;
+			txtCode.name="user_country_code";
+			txtCode.width=code.width-4; txtCode.height=code.height*0.6; txtCode.x=code.x+code.width/2-txtCode.width/2; txtCode.y=code.y+code.height/2-txtCode.height/2;
+			fmt=txtCode.defaultTextFormat;
+			fmt.color=0xFFFFFF;
+			fmt.align=TextAlign.CENTER;
+			fmt.size=txtCode.height/1.3;
+			txtCode.defaultTextFormat=fmt;
+			txtCode.text="+82";
+			_listSprite[2].addChild(txtCode);
+			
+			blank=new Join2_blank;
+			blank.x=code.x+code.width+10;
+			_listSprite[2].addChild(blank);
+			
+			//user_phone_number
+			txt=new AppTextField;
+			txt.name="user_phone_number";
+			txt.softKeyboardType=SoftKeyboardType.NUMBER;
+			txt.width=blank.width-4; txt.height=blank.height*0.6; txt.x=blank.x+blank.width/2-txt.width/2; txt.y=blank.y+blank.height/2-txt.height/2;
+			txt.textAlign=TextAlign.CENTER;
+			txt.fontSize=txt.height/1.3;
+			txt.text="010";
+			_listSprite[2].addChild(txt);
+			
+			
+			_listSprite[3]=new Sprite;
+			var join2_3:Bitmap=new Join2_3;
+			join2_3.smoothing=true;
+			_listSprite[3].addChild(join2_3);
+			
+			
+			_listSprite[4]=new Sprite;
+		
+			code=new Join2_code;
+			code.smoothing=true;
+			code_on=new Join2_code_on;
+			code_on.smoothing=true;
+			buttonCode=new TabbedButton(code,code_on,code_on);
+			buttonCode.addEventListener(MouseEvent.CLICK,coupleCode_onClick);
+			_listSprite[4].addChild(buttonCode);
+			
+			//couple_country_code
+			txtCode=new TextField;
+			txtCode.type=TextFieldType.DYNAMIC;
+			txtCode.selectable=false;
+			txtCode.multiline=false;
+			txtCode.mouseEnabled=false;
+			txtCode.name="couple_country_code";
+			txtCode.width=code.width-4; txtCode.height=code.height*0.6; txtCode.x=code.x+code.width/2-txtCode.width/2; txtCode.y=code.y+code.height/2-txtCode.height/2;
+			fmt=txtCode.defaultTextFormat;
+			fmt.color=0xFFFFFF;
+			fmt.align=TextAlign.CENTER;
+			fmt.size=txtCode.height/1.3;
+			txtCode.defaultTextFormat=fmt;
+			txtCode.text="+82";
+			_listSprite[4].addChild(txtCode);
+							
+			blank=new Join2_blank;
+			blank.x=code.x+code.width+10;
+			_listSprite[4].addChild(blank);
+			
+			//couple_phone_number
+			txt=new AppTextField;
+			txt.name="couple_phone_number";
+			txt.softKeyboardType=SoftKeyboardType.NUMBER;
+			txt.width=blank.width-4; txt.height=blank.height*0.6; txt.x=blank.x+blank.width/2-txt.width/2; txt.y=blank.y+blank.height/2-txt.height/2;
+			txt.textAlign=TextAlign.CENTER;
+			txt.fontSize=txt.height/1.3;
+			txt.text="010";
+			_listSprite[4].addChild(txt);
+			
+			
+			_listSprite[5]=new Sprite;
+			var join2_4:Bitmap=new Join2_4;
+			join2_4.smoothing=true;
+			with(_listSprite[5]){
+				btn=new SimpleButton(join2_4,join2_4,join2_4,join2_4);
+				btn.addEventListener(MouseEvent.CLICK,contact_onClick);
+				addChild(btn);
+			}
+			
+			for(var i:int=0;i<_listSprite.length;i++){
+				//_listSprite[i].cacheAsBitmap=true;
+				for(var j:int=0;j<_listSprite[i].numChildren;j++){
+					if(_listSprite[i].getChildAt(j) is AppTextField){
+						txt=_listSprite[i].getChildAt(j) as AppTextField;
+						
+						txt.addEventListener(Event.CHANGE,txt_onChange);
+						txt.addEventListener(MouseEvent.CLICK,txt_onClick);
+						txt.addEventListener(SoftKeyboardEvent.SOFT_KEYBOARD_ACTIVATE,txt_onSoftkeyboard);
+						txt.addEventListener(SoftKeyboardEvent.SOFT_KEYBOARD_DEACTIVATE,txt_onSoftkeyboard);
+					}
+				}
+			}
+			
+			Elever.Main.TopMenuVisible=true; 
+			Elever.Main.BottomMenuVisible=false;
+			
+			_keyboardHeight=0;
+			
+			_touchList = new TouchList(Elever.Main.PageWidth,Elever.Main.PageHeight);
+			_touchList.addEventListener(Event.ADDED_TO_STAGE,touchList_onAdded);
+			addChild(_touchList);			
+			
+		}
+		
+		private function userCode_onClick(e:MouseEvent):void{
+			var user_country_code:String=(_listSprite[2].getChildByName("user_country_code") as TextField).text;
+			Elever.Main.showPopup(new PhoneCodePopup(onUserCode,user_country_code));
+			Elever.Main.Page.visible=false;
+		}
+		
+		private function onUserCode(value:String):void{
+			Elever.Main.Page.visible=true;
+			(_listSprite[2].getChildByName("user_country_code") as TextField).text=value;
+		}
+		
+		private function coupleCode_onClick(e:MouseEvent):void{
+			var couple_country_code:String=(_listSprite[4].getChildByName("couple_country_code") as TextField).text;
+			Elever.Main.showPopup(new PhoneCodePopup(onCoupleCode,couple_country_code));
+			Elever.Main.Page.visible=false;
+		}
+		
+		private function onCoupleCode(value:String):void{
+			Elever.Main.Page.visible=true;
+			(_listSprite[4].getChildByName("couple_country_code") as TextField).text=value;
+		}
+		
+		private function touchList_onAdded(e:Event):void{
+			_touchList.removeListItems();
+			_touchList.resize(Elever.Main.PageWidth-5,Elever.Main.PageHeight);
+			_touchList.addListItem(new SpaceItemRenderer(70));
+			for(var i:int = 0; i < _listSprite.length; i++) {
+				if(i==0){
+					_listSprite[i].x=_touchList.width/2-_listSprite[i].width/2
+				}
+				else if(i==_listSprite.length-1){
+					_listSprite[i].x=_listSprite[i-1].x+_listSprite[i-1].width-_listSprite[i].width;
+				}
+				else{
+					_listSprite[i].x=_listSprite[0].x;
+				}
+				
+				_touchList.addListItem(new DisplayObjectItemRenderer(_listSprite[i]));
+				
+				if(i==0) _touchList.addListItem(new SpaceItemRenderer(55));
+				else if(i==2) _touchList.addListItem(new SpaceItemRenderer(40));
+				else if(i==4) _touchList.addListItem(new SpaceItemRenderer(30)); 
+				else _touchList.addListItem(new SpaceItemRenderer(20));
+			}
+		}
+		
+		private function txt_onChange(e:Event):void{
+			checkNext();
+		}
+		
+		private function txt_onClick(e:MouseEvent):void{
+			_currentTarget=e.currentTarget as DisplayObject;
+		}
+		
+		private function txt_onSoftkeyboard(e:SoftKeyboardEvent):void{
+			/*_keyboardHeight=stage.softKeyboardRect.height/Elever.Main.scaleY;
+			onResize();
+			if(e.type==SoftKeyboardEvent.SOFT_KEYBOARD_DEACTIVATE){
+				_currentTarget=null;
+			}
+			else{
+				_touchList.ScrollTop=_currentTarget.parent.parent.y+_currentTarget.y+_currentTarget.height/2-_touchList.ScrollArea/2;
+				if(_currentTarget is AppTextField){
+					(_currentTarget as AppTextField).focus();
+				}
+			}*/
+		}
+		
+		private function contact_onClick(e:MouseEvent):void{
+			var couple_phone_number:String=(_listSprite[4].getChildByName("couple_phone_number") as AppTextField).text;
+			Elever.Main.showPopup(new PhoneBookPopup(onContact,couple_phone_number));
+			Elever.Main.Page.visible=false;			
+		}
+		
+		private function onContact(value:String):void{
+			Elever.Main.Page.visible=true;
+			if(value==null) value="";
+			(_listSprite[4].getChildByName("couple_phone_number") as AppTextField).text=value;
+		}
+		
+		private function prev_onClick(e:MouseEvent):void{			
+			Elever.Main.TopMenu.LeftButton.removeEventListener(MouseEvent.CLICK,prev_onClick);
+			
+			Elever.Account=null;
+			Elever.saveEnviroment();
+			
+			Elever.Main.setPage("eleverUserLoginPage",null,EleverPageEffect.RIGHT,EleverPageEffect.RIGHT);
+		}
+		
+		private function next_onClick(e:MouseEvent):void{
+			if(checkNext()){
+				Elever.Main.LoadingVisible=true;
+				
+				var params:URLVariables=new URLVariables;
+				
+				var user_country_code:String=(_listSprite[2].getChildByName("user_country_code") as TextField).text;
+				var user_phone_number:String=(_listSprite[2].getChildByName("user_phone_number") as AppTextField).text;
+				var couple_country_code:String=(_listSprite[4].getChildByName("couple_country_code") as TextField).text;
+				var couple_phone_number:String=(_listSprite[4].getChildByName("couple_phone_number") as AppTextField).text;
+				
+				if(user_phone_number.substr(0,1)=="0") user_phone_number=user_phone_number.substr(1);
+				if(couple_phone_number.substr(0,1)=="0") couple_phone_number=couple_phone_number.substr(1);
+				
+				user_phone_number=user_phone_number.replace(/-/g,"");
+				couple_phone_number=couple_phone_number.replace(/-/g,"");
+				
+				params.user_seq=Elever.UserInfo.user_seq;
+				params.search_phonenum=user_country_code+" "+user_phone_number;
+				params.search_couplenum=couple_country_code+" "+couple_phone_number;
+				
+				Elever.Connection.post("eleverCouplePhNoRegRegAction.tiein",params,onRegComplete);
+			}
+			else{
+				new Alert("제대로 입력해주세염").show();
+			}
+		}
+		
+		private function onRegComplete(data:String):void{
+			Elever.Main.LoadingVisible=false;
+			
+			if(data){
+				var result:Object=JSON.parse(data);
+				
+				if(result.j_errorMsg.length>0){
+					new Alert(result.j_errorMsg).show();
+					return;
+				}
+				
+				if(result.nextPage!=Elever.Main.PageName){
+					if(result.userInfoModelO){
+						Elever.UserInfo=result.userInfoModelO;
+						if(result.j_userStartYn=="y"){
+							result.nextPage="eleverWelcomePage";
+						}
+					}
+					else{
+						Elever.UserInfo={ 
+							user_seq:result.j_user_seq,
+							user_phonenum:result.j_user_phonenum,
+							couple_user_phonenum:result.j_couple_user_couplenum,
+							remain_time:24*60*60
+						};
+					}
+					
+					Elever.Main.setPage(result.nextPage);
+					return;
+				}
+			}
+			
+			new Alert("사용자 생성 실패").show();
+		}
+		
+		private function checkNext():Boolean{		
+			if((_listSprite[2].getChildByName("user_country_code") as TextField).text.length==0) return false;
+			if((_listSprite[2].getChildByName("user_phone_number") as AppTextField).text.length==0) return false;
+			if((_listSprite[4].getChildByName("couple_country_code") as TextField).text.length==0) return false;
+			if((_listSprite[4].getChildByName("couple_phone_number") as AppTextField).text.length==0) return false;
+			
+			return true;
+		}
+		
+		public override function dispose():void{
+			_touchList.removeListItems();
+			_touchList.removeEventListener(Event.ADDED_TO_STAGE,touchList_onAdded);
+			removeChild(_touchList);
+			_touchList=null;
+			
+			for(var i:int=0;i<_listSprite.length;i++){
+				while(_listSprite[i].numChildren>0){
+					if(_listSprite[i].getChildAt(0) is AppTextField){
+						var txt:AppTextField=_listSprite[i].getChildAt(0) as AppTextField;
+						
+						txt.removeEventListener(Event.CHANGE,txt_onChange);
+						txt.removeEventListener(MouseEvent.CLICK,txt_onClick);
+						txt.removeEventListener(SoftKeyboardEvent.SOFT_KEYBOARD_ACTIVATE,txt_onSoftkeyboard);
+						txt.removeEventListener(SoftKeyboardEvent.SOFT_KEYBOARD_DEACTIVATE,txt_onSoftkeyboard);
+						
+					}
+					else if(_listSprite[i].getChildAt(0) is SimpleButton){
+						var btn:SimpleButton=_listSprite[i].getChildAt(0) as SimpleButton;
+						
+						btn.removeEventListener(MouseEvent.CLICK,contact_onClick);
+					}
+					
+					_listSprite[i].removeChildAt(0);
+				}
+				if(_listSprite[i].parent)_listSprite[i].parent.removeChild(_listSprite[i]);
+				_listSprite[i]=null;
+			}
+			_listSprite.splice(0,_listSprite.length);
+			_listSprite=null;
+			
+			Elever.Main.TopMenu.LeftButton.removeEventListener(MouseEvent.CLICK,prev_onClick);
+			Elever.Main.TopMenu.RightButton.removeEventListener(MouseEvent.CLICK,next_onClick );
+		}
+		
+		public override function onResize():void{
+			_touchList.resize(Elever.Main.PageWidth,Elever.Main.PageHeight-_keyboardHeight);
+		}
+	}
+}

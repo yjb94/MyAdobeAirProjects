@@ -1,0 +1,703 @@
+package Page.Chat
+{
+	import com.thanksmister.touchlist.controls.TouchList;
+	import com.thanksmister.touchlist.renderers.DisplayObjectItemRenderer;
+	import com.thanksmister.touchlist.renderers.SpaceItemRenderer;
+	
+	import flash.desktop.NativeApplication;
+	import flash.display.Bitmap;
+	import flash.display.Sprite;
+	import flash.events.Event;
+	import flash.events.MouseEvent;
+	import flash.events.RemoteNotificationEvent;
+	import flash.events.SoftKeyboardEvent;
+	import flash.geom.Rectangle;
+	import flash.net.URLVariables;
+	import flash.text.TextField;
+	import flash.text.TextFieldAutoSize;
+	import flash.text.TextFieldType;
+	import flash.text.TextFormat;
+	import flash.utils.getTimer;
+	
+	import Page.BasePage;
+	
+	import co.uk.mikestead.net.URLFileVariable;
+	
+	import kr.pe.hs.tween.Tween;
+	import kr.pe.hs.ui.TabbedButton;
+
+	public class Index extends BasePage
+	{
+		[Embed(source = "assets/page/chat/button_settings.png")]
+		private const BUTTON_SETTINGS:Class;
+		[Embed(source = "assets/page/chat/button_settings_on.png")]
+		private const BUTTON_SETTINGS_ON:Class;
+ 		
+		[Embed(source = "assets/page/chat/button_close.png")]
+		private const BUTTON_CLOSE:Class;
+		[Embed(source = "assets/page/chat/button_close_on.png")]
+		private const BUTTON_CLOSE_ON:Class;
+		
+		[Embed(source = "assets/page/chat/bottom_bg_top.png")]
+		private const BOTTOM_BG_TOP:Class;
+		[Embed(source = "assets/page/chat/bottom_bg_bottom.png")]
+		private const BOTTOM_BG_BOTTOM:Class;
+		
+		[Embed(source = "assets/page/chat/input_01.png")]
+		private const INPUT_BG_TOP:Class;
+		[Embed(source = "assets/page/chat/input_02.png")]
+		private const INPUT_BG_MID:Class;
+		[Embed(source = "assets/page/chat/input_03.png")]
+		private const INPUT_BG_BOTTOM:Class;
+		
+		[Embed(source = "assets/page/chat/button_more.png")]
+		private const BUTTON_MORE:Class;
+		[Embed(source = "assets/page/chat/button_more.png")]
+		private const BUTTON_MORE_ON:Class;
+		
+		[Embed(source = "assets/page/chat/button_emoticons.png")]
+		private const BUTTON_EMOTICONS:Class;
+		[Embed(source = "assets/page/chat/button_emoticons.png")]
+		private const BUTTON_EMOTICONS_ON:Class;
+		
+		[Embed(source = "assets/page/chat/button_send.png")]
+		private const BUTTON_SEND:Class;
+		[Embed(source = "assets/page/chat/button_send_on.png")]
+		private const BUTTON_SEND_ON:Class;
+		
+		
+		private var _keyboardScaleTween:Tween;
+		
+		
+		private var _buttonSettings:TabbedButton;
+		private var _buttonClose:TabbedButton;
+		
+		private var _isLoading:Boolean;
+		private var _canSend:Boolean;
+		private var _sendingCount:int;
+		private var _currentNextData:Number;
+		
+		private var _keyboardHeight:Number;
+		
+		private var _listSprite:Vector.<Sprite>;
+		private var _touchList:TouchList;
+		
+		private var _bottom:Sprite;
+		private var _bottomBgBottom:Bitmap;
+		
+		private var _inputText:TextField;
+		private var _inputTextBgTop:Bitmap;
+		private var _inputTextBgMid:Bitmap;
+		private var _inputTextBgBottom:Bitmap;
+		
+		private var _buttonMore:TabbedButton;
+		private var _buttonEmoticons:TabbedButton;
+		private var _buttonSend:TabbedButton;
+		
+		private var _emoticons:EmoticonPicker;
+		
+		public function Index()
+		{
+			super();			
+			
+			Elever.Main.TopMenu.clearAddedChild();
+			Elever.Main.TopMenuVisible=true;
+			Elever.Main.BottomMenuVisible=false;
+			Elever.Main.BottomMenu.setCursor(BottomMenuSprite.CURSOR_CHAT);
+			
+			
+			var rightMenu:Sprite=new Sprite;
+			
+			var bmpSettings:Bitmap=new BUTTON_SETTINGS; bmpSettings.smoothing=true;
+			var bmpSettings_on:Bitmap=new BUTTON_SETTINGS_ON; bmpSettings_on.smoothing=true;
+			_buttonSettings=new TabbedButton(bmpSettings,bmpSettings_on,bmpSettings_on);
+			_buttonSettings.addEventListener(MouseEvent.CLICK,settings_onClick);
+			
+			var bmpClose:Bitmap=new BUTTON_CLOSE; bmpClose.smoothing=true;
+			var bmpClose_on:Bitmap=new BUTTON_CLOSE_ON; bmpClose_on.smoothing=true;
+			_buttonClose=new TabbedButton(bmpClose,bmpClose_on,bmpClose_on);
+			_buttonClose.x=_buttonSettings.x+_buttonSettings.width+5;
+			_buttonClose.addEventListener(MouseEvent.CLICK,close_onClick);
+			
+			rightMenu.addChild(_buttonSettings);
+			rightMenu.addChild(_buttonClose);
+			Elever.Main.TopMenu.RightButton=rightMenu;
+			
+					
+			
+			_bottom=new Sprite;
+			
+			var bmpBottomTop:Bitmap=new BOTTOM_BG_TOP; bmpBottomTop.smoothing=true;
+			_bottom.addChild(bmpBottomTop);
+			
+			var bmpBottomBottom:Bitmap=new BOTTOM_BG_BOTTOM; bmpBottomBottom.smoothing=true;
+			bmpBottomBottom.y=bmpBottomTop.y+bmpBottomTop.height;
+			_bottom.addChild(bmpBottomBottom);
+			_bottomBgBottom=bmpBottomBottom;
+			
+			
+			_inputTextBgTop = new INPUT_BG_TOP; _inputTextBgTop.smoothing=true;
+			_inputTextBgTop.x=103;
+			_inputTextBgTop.y=20;
+			_bottom.addChild(_inputTextBgTop);
+			
+			_inputTextBgMid = new INPUT_BG_MID; _inputTextBgMid.smoothing=true;
+			_inputTextBgMid.x=_inputTextBgTop.x;
+			_inputTextBgMid.y=_inputTextBgTop.y+_inputTextBgTop.height-0.5;
+			_inputTextBgMid.height=33;
+			_bottom.addChild(_inputTextBgMid);
+			
+			_inputTextBgBottom = new INPUT_BG_BOTTOM; _inputTextBgBottom.smoothing=true;
+			_inputTextBgBottom.x=_inputTextBgMid.x;
+			_inputTextBgBottom.y=_inputTextBgMid.y+_inputTextBgMid.height;
+			_bottom.addChild(_inputTextBgBottom);
+			
+			var txt:TextField=new TextField;
+			txt.type=TextFieldType.INPUT;
+			txt.border=false;
+			var fmt:TextFormat=txt.defaultTextFormat;
+			fmt.color=0x474747;
+			//fmt.font="Main";
+			fmt.size=28;
+			txt.defaultTextFormat=fmt;
+			txt.multiline=true;
+			txt.wordWrap=true;
+			txt.selectable=true;
+			txt.alwaysShowSelection=true;
+			txt.needsSoftKeyboard=true;
+			txt.x=_inputTextBgMid.x+6; txt.y=_inputTextBgMid.y; txt.width=_inputTextBgMid.width-12; txt.height=_inputTextBgMid.height;
+			//txt.embedFonts=true;
+			//txt.antiAliasType=AntiAliasType.ADVANCED;
+			txt.addEventListener(SoftKeyboardEvent.SOFT_KEYBOARD_ACTIVATE,softKeyboard_onActivate);
+			txt.addEventListener(SoftKeyboardEvent.SOFT_KEYBOARD_ACTIVATING,softKeyboard_onActivate);
+			txt.addEventListener(SoftKeyboardEvent.SOFT_KEYBOARD_DEACTIVATE,softKeyboard_onActivate);
+			txt.addEventListener(Event.CHANGE,txt_onChange);
+			_bottom.addChild(txt);
+			_inputText=txt;
+			
+			var bmpMore:Bitmap=new BUTTON_MORE; bmpMore.smoothing=true;
+			var bmpMore_on:Bitmap=new BUTTON_MORE_ON; bmpMore_on.smoothing=true; bmpMore_on.alpha=0.6;
+			_buttonMore=new TabbedButton(bmpMore,bmpMore_on,bmpMore_on);
+			_buttonMore.x=6;
+			_buttonMore.y=_bottomBgBottom.y+_bottomBgBottom.height-17-_buttonMore.height;
+			_buttonMore.addEventListener(MouseEvent.CLICK,more_onClick);
+			_bottom.addChild(_buttonMore);
+			
+			var bmpEmoticons:Bitmap=new BUTTON_EMOTICONS; bmpEmoticons.smoothing=true;
+			var bmpEmoticons_on:Bitmap=new BUTTON_EMOTICONS_ON; bmpEmoticons_on.smoothing=true; bmpEmoticons_on.alpha=0.6;
+			_buttonEmoticons=new TabbedButton(bmpEmoticons,bmpEmoticons_on,bmpEmoticons_on);
+			_buttonEmoticons.x=49;
+			_buttonEmoticons.y=_bottomBgBottom.y+_bottomBgBottom.height-17-_buttonEmoticons.height;
+			_buttonEmoticons.addEventListener(MouseEvent.CLICK,emoticons_onClick);
+			_bottom.addChild(_buttonEmoticons);
+			
+			var bmpSend:Bitmap=new BUTTON_SEND; bmpSend.smoothing=true;
+			var bmpSend_on:Bitmap=new BUTTON_SEND_ON; bmpSend_on.smoothing=true; bmpSend_on.alpha=0.6;
+			_buttonSend=new TabbedButton(bmpSend,bmpSend_on,bmpSend_on);
+			_buttonSend.x=427;
+			_buttonSend.y=_bottomBgBottom.y+_bottomBgBottom.height-14-_buttonSend.height;
+			_buttonSend.addEventListener(MouseEvent.CLICK,send_onClick);
+			_bottom.addChild(_buttonSend);
+			
+			_bottom.x=0;
+			_bottom.y=Elever.Main.PageHeight-_bottom.height;
+			
+			_keyboardHeight=0;
+			
+			
+			_listSprite=new Vector.<Sprite>;
+			
+			_touchList=new TouchList(Elever.Main.PageWidth,Elever.Main.PageHeight-_keyboardHeight-_bottom.height+5);
+			_touchList.addEventListener(Event.ADDED_TO_STAGE,touchList_onAdded);
+			_touchList.setOnListMove(onListMoved);
+			
+			addChild(_touchList);
+			addChild(_bottom);
+			
+			
+			_emoticons=new EmoticonPicker;
+			_emoticons.visible=false;
+			addChild(_emoticons);
+			
+			
+			_isLoading=false;
+			_canSend=true;
+			_sendingCount=0;
+			_currentNextData=getTimer();
+		
+			loadCurrentChatData();
+			
+			Elever.PushService.addEventListener(RemoteNotificationEvent.NOTIFICATION,onNotification);
+			NativeApplication.nativeApplication.addEventListener(Event.ACTIVATE, onActivate);
+		}
+		
+		private function onNotification(e:RemoteNotificationEvent):void{
+			if(e.data.type=="chat"){
+				loadNextChatData();
+			}
+			else if(e.data.type=="chatReadState"){
+				for(var i:int = 0; i < _listSprite.length; i++) {
+					if(_listSprite[i] is TextBalloon){
+						(_listSprite[i] as TextBalloon).Unread=false;
+					}
+				}
+			}
+		}
+		
+		private function onActivate(e:Event):void{
+			loadNextChatData();
+		}
+		
+		private function txt_onChange(e:Event=null):void{
+			var tempText:TextField=new TextField;
+			tempText.type=TextFieldType.DYNAMIC;
+			tempText.defaultTextFormat=_inputText.defaultTextFormat;
+			tempText.autoSize=TextFieldAutoSize.LEFT; //_inputText.autoSize;
+			tempText.multiline=_inputText.multiline;
+			tempText.wordWrap=_inputText.wordWrap;
+			tempText.width=_inputText.width-15;
+			tempText.text=_inputText.text;
+			
+			var lines:int=tempText.numLines; //tempText.getLineIndexOfChar(tempText.length-1)+1;
+			if(lines>3) lines=3;
+			var textHeight:Number=lines*parseInt(tempText.defaultTextFormat.size.toString())*1.1;
+			if(lines>1) textHeight+=10;
+			
+			_inputTextBgMid.height=textHeight;
+			_inputTextBgMid.y=_inputTextBgTop.y+_inputTextBgTop.height;
+			if(_inputTextBgMid.height<33) _inputTextBgMid.height=33;
+			_inputTextBgBottom.y=_inputTextBgMid.y+_inputTextBgMid.height;
+			_bottomBgBottom.height=_inputTextBgMid.height+32;
+			
+			if(_inputText.height!=textHeight){
+				_inputText.height=textHeight;
+			}
+			
+			_buttonMore.y=_bottomBgBottom.y+_bottomBgBottom.height-17-_buttonMore.height;
+			_buttonEmoticons.y=_bottomBgBottom.y+_bottomBgBottom.height-17-_buttonEmoticons.height;
+			_buttonSend.y=_bottomBgBottom.y+_bottomBgBottom.height-14-_buttonSend.height;
+			
+			var pageHeight:Number=Elever.Main.PageHeight-(_keyboardHeight/Elever.Main.scaleY);
+			_bottom.y=pageHeight-_bottom.height;
+			_touchList.resize(Elever.Main.PageWidth,pageHeight-_bottom.height+5);
+		}
+		
+		private function softKeyboard_onActivate(e:SoftKeyboardEvent):void{
+			if(e.type==SoftKeyboardEvent.SOFT_KEYBOARD_ACTIVATING){
+				//Soft Keyboard height = 432/Elever.Main.scaleY(iOS7 on iPad2) = 364.5
+				_buttonEmoticons.isTabbed=false;
+				_keyboardHeight=432;
+				
+				onResize();
+			}
+			else{
+				if(!_buttonEmoticons.isTabbed){
+					var rect:Rectangle=stage.softKeyboardRect;
+					_keyboardHeight=rect.height;
+				}
+				else{
+					_keyboardHeight=_emoticons.height*Elever.Main.scaleY;
+				}
+				onResize();
+			}
+		}
+		
+		private function touchList_onAdded(e:Event=null):void{
+			_touchList.removeListItems();
+			onResize();
+			_touchList.addListItem(new SpaceItemRenderer(20));
+			for(var i:int = 0; i < _listSprite.length; i++) {
+				//_listSprite[i].x=_touchList.width/2-_listSprite[i].width/2
+				_touchList.addListItem(new DisplayObjectItemRenderer(_listSprite[i]));
+				_touchList.addListItem(new SpaceItemRenderer(20));
+			}
+			
+			_touchList.ScrollTop=Math.floor(_touchList.ScrollHeight);
+		}
+		
+		private function onListMoved():void{
+			if(_touchList.ScrollTop<0){
+				loadPrevChatData();
+			}
+			else if(_touchList.ScrollTop>Math.floor(_touchList.ScrollHeight)){
+				if(getTimer()-_currentNextData>5000){
+					_currentNextData=getTimer();
+					loadNextChatData();
+				}
+			}
+		}
+		
+		//최큰 채팅 목록 불러오기 (리스트를 모두 비우게됨...)
+		private function loadCurrentChatData():void{
+			if(_isLoading) return;
+			
+			_isLoading=true;
+			
+			var params:URLVariables=new URLVariables;
+			params.user_seq=Elever.UserInfo.user_seq;
+			params.room_seq=Elever.UserInfo.room_seq;
+			
+			Elever.Connection.remove("eleverChatListAction.tiein");
+			Elever.Connection.post("eleverChatListAction.tiein",params,onCurrentChatData);
+		}
+		
+		private function onCurrentChatData(data:String):void{
+			var result:Object=JSON.parse(data);
+			
+			if(result.j_errorMsg.length>0){
+				new Alert(result.j_errorMsg).show();
+				return;
+			}
+			
+			_touchList.removeListItems();
+			onResize();
+			_touchList.addListItem(new SpaceItemRenderer(20));
+			
+			var list:Array=result.j_list;
+			for(var i:int=0;i<list.length;i++){
+				var time:Date=new Date(list[i].chat_cdd.substr(0,4),list[i].chat_cdd.substr(4,2),list[i].chat_cdd.substr(6,2),list[i].chat_cdt.substr(0,2),list[i].chat_cdt.substr(2,2),list[i].chat_cdt.substr(4,2));
+				
+				var timeString:String="";
+				if(time.hours<12) timeString+="오전";
+				else timeString+="오후";
+				timeString+=" ";
+				if(time.hours%12==0) timeString+="12";
+				else timeString+=(time.hours%12).toString();
+				timeString+=":";
+				if(time.minutes<10)timeString+="0";
+				timeString+=(time.minutes).toString();
+				
+				var balloon:TextBalloon = new TextBalloon(
+					(list[i].user_seq==Elever.UserInfo.user_seq)?TextBalloon.ALIGN_RIGHT:TextBalloon.ALIGN_LEFT,
+					list[i].user_nickname,
+					list[i].chat_content,
+					timeString,
+					(list[i].couple_user_cyn=="0"),
+					Elever.Main.PageWidth);
+				
+				balloon.chat_seq=list[i].chat_ymds;
+				
+				_listSprite[_listSprite.length]=balloon;
+				//_currentList[_currentList.length]=list[i];
+				
+				_touchList.addListItem(new DisplayObjectItemRenderer(_listSprite[i]));
+				_touchList.addListItem(new SpaceItemRenderer(20));
+			}
+			
+			_touchList.ScrollTop=Math.floor(_touchList.ScrollHeight);
+			
+			_isLoading=false;
+		}
+		
+		
+		//마지막으로 불러온 값 이전의 데이터 불러오기
+		private function loadPrevChatData():void{
+			if(_isLoading) return;
+						
+			if(_listSprite.length==0 || (_listSprite[0] as TextBalloon).chat_seq==null){
+				loadCurrentChatData();
+				return;
+			}
+			
+			var lastItem:TextBalloon=(_listSprite[0] as TextBalloon);
+			
+			_isLoading=true;
+			
+			var params:URLVariables=new URLVariables;
+			params.user_seq=Elever.UserInfo.user_seq;
+			params.room_seq=Elever.UserInfo.room_seq;
+			params.beforeYMDS=lastItem.chat_seq;
+			
+			Elever.Connection.remove("eleverChatListAction.tiein");
+			Elever.Connection.post("eleverChatListAction.tiein",params,onPrevChatData);
+		}
+		
+		private function onPrevChatData(data:String):void{
+			var result:Object=JSON.parse(data);
+			
+			if(result.j_errorMsg.length>0){
+				new Alert(result.j_errorMsg).show();
+				return;
+			}
+			
+			var autoScroll:Boolean=false;
+			var currentScrollPos:Number=-1;
+			if(_touchList.ScrollTop>=_touchList.ScrollHeight)
+				autoScroll=true;
+			else
+				currentScrollPos=_touchList.ScrollHeight-_touchList.ScrollTop;
+			
+			var list:Array=result.j_list;
+			for(var i:int=0;i<list.length;i++){
+				var time:Date=new Date(list[i].chat_cdd.substr(0,4),list[i].chat_cdd.substr(4,2),list[i].chat_cdd.substr(6,2),list[i].chat_cdt.substr(0,2),list[i].chat_cdt.substr(2,2),list[i].chat_cdt.substr(4,2));
+				
+				var timeString:String="";
+				if(time.hours<12) timeString+="오전";
+				else timeString+="오후";
+				timeString+=" ";
+				if(time.hours%12==0) timeString+="12";
+				else timeString+=(time.hours%12).toString();
+				timeString+=":";
+				if(time.minutes<10)timeString+="0";
+				timeString+=(time.minutes).toString();
+				
+				var balloon:TextBalloon = new TextBalloon(
+					(list[i].user_seq==Elever.UserInfo.user_seq)?TextBalloon.ALIGN_RIGHT:TextBalloon.ALIGN_LEFT,
+					list[i].user_nickname,
+					list[i].chat_content,
+					timeString,
+					(list[i].couple_user_cyn=="0"),
+					Elever.Main.PageWidth);
+				
+				balloon.chat_seq=list[i].chat_ymds;
+				
+				_listSprite.splice(i,0,balloon);
+				//_currentList[_currentList.length]=list[i];
+				
+				_touchList.addListItemAt(new DisplayObjectItemRenderer(_listSprite[i]),1+i*2);
+				_touchList.addListItemAt(new SpaceItemRenderer(20),1+(i*2)+1);
+			}
+			
+			if(autoScroll) 
+				_touchList.ScrollTop=Math.floor(_touchList.ScrollHeight);
+			else
+				_touchList.ScrollTop=_touchList.ScrollHeight-currentScrollPos;
+			
+			_isLoading=false;
+		}
+		
+		//마지막으로 불러온 값 이후의 데이터 불러오기
+		private function loadNextChatData():void{
+			if(_isLoading || _sendingCount>0) return;
+			
+			var currentItem:TextBalloon=null;
+			for(var i:int=_listSprite.length-1;i>=0;i--){
+				if(_listSprite[i] is TextBalloon){
+					currentItem=(_listSprite[i] as TextBalloon);
+					if(currentItem.chat_seq==null) currentItem=null;
+					else break;
+				}
+			}
+			
+			if(currentItem==null){
+				loadCurrentChatData();
+				return;
+			}
+			
+			_isLoading=true;
+			
+			var params:URLVariables=new URLVariables;
+			params.user_seq=Elever.UserInfo.user_seq;
+			params.room_seq=Elever.UserInfo.room_seq;
+			params.afterYMDS=currentItem.chat_seq;
+			
+			Elever.Connection.remove("eleverChatListAction.tiein");
+			Elever.Connection.post("eleverChatListAction.tiein",params,onNextChatData);
+		}
+		
+		private function onNextChatData(data:String):void{
+			var result:Object=JSON.parse(data);
+			
+			if(result.j_errorMsg.length>0){
+				new Alert(result.j_errorMsg).show();
+				return;
+			}
+			
+			
+			while(_listSprite.length>0){
+				if(_listSprite[_listSprite.length-1] is TextBalloon){
+					var currentItem:TextBalloon=(_listSprite[_listSprite.length-1] as TextBalloon);
+					if(currentItem.chat_seq==null) currentItem=null;
+					else break;
+				}
+				
+				_touchList.removeListItemAt(1+((_listSprite.length-1)*2)+1);
+				_touchList.removeListItemAt(1+((_listSprite.length-1)*2));
+				_listSprite.splice(_listSprite.length-1,1);
+			}
+			
+			var autoScroll:Boolean=false;
+			var currentScrollPos:Number=-1;
+			if(_touchList.ScrollTop>=_touchList.ScrollHeight)
+				autoScroll=true;
+			else
+				currentScrollPos=_touchList.ScrollHeight-_touchList.ScrollTop;
+			
+			var list:Array=result.j_list;
+			if(list!=null){
+				for(var i:int=0;i<list.length;i++){
+					var time:Date=new Date(list[i].chat_cdd.substr(0,4),list[i].chat_cdd.substr(4,2),list[i].chat_cdd.substr(6,2),list[i].chat_cdt.substr(0,2),list[i].chat_cdt.substr(2,2),list[i].chat_cdt.substr(4,2));
+					
+					var timeString:String="";
+					if(time.hours<12) timeString+="오전";
+					else timeString+="오후";
+					timeString+=" ";
+					if(time.hours%12==0) timeString+="12";
+					else timeString+=(time.hours%12).toString();
+					timeString+=":";
+					if(time.minutes<10)timeString+="0";
+					timeString+=(time.minutes).toString();
+					
+					var balloon:TextBalloon = new TextBalloon(
+						(list[i].user_seq==Elever.UserInfo.user_seq)?TextBalloon.ALIGN_RIGHT:TextBalloon.ALIGN_LEFT,
+						list[i].user_nickname,
+						list[i].chat_content,
+						timeString,
+						(list[i].couple_user_cyn=="0"),
+						Elever.Main.PageWidth);
+					
+					balloon.chat_seq=list[i].chat_ymds;
+					
+					_listSprite[_listSprite.length]=balloon;
+					
+					_touchList.addListItem(new DisplayObjectItemRenderer(balloon));
+					_touchList.addListItem(new SpaceItemRenderer(20));
+				}
+				
+				if(autoScroll) 
+					_touchList.ScrollTop=Math.floor(_touchList.ScrollHeight);
+				else
+					_touchList.ScrollTop=_touchList.ScrollHeight-currentScrollPos;
+			}
+			_isLoading=false;
+		}
+		public override function onResize():void{
+			if(_bottom.y!=Elever.Main.PageHeight-(_keyboardHeight/Elever.Main.scaleY)-_bottom.height){
+				if(_keyboardScaleTween){
+					_keyboardScaleTween.endTween();
+					_keyboardScaleTween=null;
+				}
+				_keyboardScaleTween=new Tween(_bottom.y,Elever.Main.PageHeight-(_keyboardHeight/Elever.Main.scaleY)-_bottom.height,0,150,function(value:Number,isFinish:Boolean):void{
+					_bottom.y=value;
+					
+					var currentPos:Number=_touchList.ScrollHeight-_touchList.ScrollTop;
+					_touchList.resize(Elever.Main.PageWidth,_bottom.y+5);
+					_touchList.ScrollTop=_touchList.ScrollHeight-currentPos;
+					
+					if(_emoticons.visible){
+						_emoticons.x=_bottom.x;
+						_emoticons.y=_bottom.y+_bottom.height;
+						
+						if(isFinish && !_buttonEmoticons.isTabbed){
+							_emoticons.visible=false;
+						}
+					}
+				});
+			}
+			else{
+				var pageHeight:Number=Elever.Main.PageHeight-(_keyboardHeight/Elever.Main.scaleY);
+				_bottom.y=pageHeight-_bottom.height;
+				
+				_touchList.resize(Elever.Main.PageWidth,pageHeight-_bottom.height+5);
+			}
+			
+		}
+		
+		public override function dispose():void{
+			Elever.PushService.removeEventListener(RemoteNotificationEvent.NOTIFICATION,onNotification);
+			NativeApplication.nativeApplication.removeEventListener(Event.ACTIVATE, onActivate);
+			
+			if(_keyboardScaleTween){
+				_keyboardScaleTween.endTween();
+				_keyboardScaleTween=null;
+			}
+			
+			_touchList.removeListItems();
+			_touchList.removeEventListener(Event.ADDED_TO_STAGE,touchList_onAdded);
+			removeChild(_touchList);
+			_touchList=null;
+			
+			for(var i:int=0;i<_listSprite.length;i++){
+				while(_listSprite[i].numChildren>0) _listSprite[i].removeChildAt(0);
+				if(_listSprite[i].parent) _listSprite[i].parent.removeChild(_listSprite[i]);
+				_listSprite[i]=null;
+			}
+			_listSprite.splice(0,_listSprite.length);
+			_listSprite=null;
+		}
+		
+		private function settings_onClick(e:MouseEvent):void{
+			
+		}
+		
+		private function close_onClick(e:MouseEvent):void{
+			Elever.Main.setPage("eleverStartPage");
+		}
+		
+		private function more_onClick(e:MouseEvent):void{
+			
+		}
+		
+		private function emoticons_onClick(e:MouseEvent):void{
+			_buttonEmoticons.isTabbed=!_buttonEmoticons.isTabbed;
+			_emoticons.visible=_buttonEmoticons.isTabbed;
+			if(_buttonEmoticons.isTabbed){
+				_emoticons.x=_bottom.x;
+				_emoticons.y=_bottom.y+_bottom.height;
+				
+				_keyboardHeight=_emoticons.height*Elever.Main.scaleY;
+			}
+			else{
+				_keyboardHeight=0;
+			}
+			onResize();
+		}
+		
+		private function send_onClick(e:MouseEvent):void{
+			if(_inputText.length>0 && _canSend){
+				_canSend=false;
+				
+				var autoScroll:Boolean=false;
+				if(_touchList.ScrollTop>=_touchList.ScrollHeight) autoScroll=true;
+				
+				var params:URLVariables=new URLVariables;
+				params.user_seq=Elever.UserInfo.user_seq;
+				params.room_seq=Elever.UserInfo.room_seq;
+				params.couple_user_seq=Elever.UserInfo.couple_user_seq;
+				params.chat_content=_inputText.text;
+				params.item_seq="0";
+				params.file_1=new URLFileVariable;
+				
+				Elever.Connection.post("eleverChatRegAction.tiein",params,onSend);
+				
+				_sendingCount++;
+				
+				
+				var balloon:TextBalloon = new TextBalloon(
+					TextBalloon.ALIGN_RIGHT,
+					Elever.UserInfo.user_nickname,
+					_inputText.text,
+					"전송중..",
+					true,
+					Elever.Main.PageWidth);
+				
+				_listSprite[_listSprite.length]=balloon;
+				
+				_touchList.addListItem(new DisplayObjectItemRenderer(balloon));
+				_touchList.addListItem(new SpaceItemRenderer(20));
+				
+				_touchList.ScrollTop=Math.floor(_touchList.ScrollHeight);
+				
+				//stage.focus=null;
+				_inputText.text="";
+				txt_onChange();
+				_canSend=true;
+				//onResize();
+			}
+		}
+		
+		private function onSend(data:String):void{
+			
+			var result:Object=JSON.parse(data);
+			
+			if(result.j_errorMsg.length>0){
+				new Alert(result.j_errorMsg).show();
+				return;
+			}
+			
+			if(_sendingCount>0) _sendingCount--;
+			
+			loadNextChatData();
+		}
+	}
+}

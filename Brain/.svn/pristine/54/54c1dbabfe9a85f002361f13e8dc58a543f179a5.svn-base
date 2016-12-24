@@ -1,0 +1,459 @@
+package Page.Login
+{
+	import com.thanksmister.touchlist.controls.TouchList;
+	import com.thanksmister.touchlist.renderers.DisplayObjectItemRenderer;
+	import com.thanksmister.touchlist.renderers.SpaceItemRenderer;
+	
+	import flash.display.Bitmap;
+	import flash.display.DisplayObject;
+	import flash.display.SimpleButton;
+	import flash.display.Sprite;
+	import flash.events.Event;
+	import flash.events.MouseEvent;
+	import flash.events.SoftKeyboardEvent;
+	import flash.geom.Point;
+	import flash.net.URLVariables;
+	import flash.system.Capabilities;
+	import flash.text.AntiAliasType;
+	import flash.text.ReturnKeyLabel;
+	import flash.text.SoftKeyboardType;
+	import flash.text.TextField;
+	import flash.text.TextFieldType;
+	import flash.text.TextFormat;
+	import flash.text.TextFormatAlign;
+	
+	import Page.BasePage;
+	
+	import kr.pe.hs.ui.AppTextField;
+	import kr.pe.hs.ui.TabbedButton;
+	
+	import pl.mateuszmackowiak.nativeANE.dialogs.NativeDatePickerDialog;
+	import pl.mateuszmackowiak.nativeANE.events.NativeDialogEvent;
+	
+	public class Join1 extends BasePage
+	{
+		[Embed(source = "assets/top_menu/button_close.png")]
+		private var BUTTON_CLOSE:Class;
+		[Embed(source = "assets/top_menu/button_close_on.png")]
+		private var BUTTON_CLOSE_ON:Class;
+		
+		[Embed(source = "assets/top_menu/button_next.png")]
+		private var BUTTON_NEXT:Class;
+		[Embed(source = "assets/top_menu/button_next_on.png")]
+		private var BUTTON_NEXT_ON:Class;
+		
+		[Embed(source = "assets/page/login/join1/title1.png")]
+		private var TITLE:Class;
+		
+		[Embed(source = "assets/page/login/join1/status1.png")]
+		private var STATUS:Class;
+		
+		[Embed(source = "assets/page/login/join1/join1_1.png")]
+		private var JOIN1_1:Class;
+		[Embed(source = "assets/page/login/join1/join1_2.png")]
+		private var JOIN1_2:Class;
+		
+		[Embed(source = "assets/page/login/join1/male.png")]
+		private var MALE:Class;
+		[Embed(source = "assets/page/login/join1/male_on.png")]
+		private var MALE_ON:Class;
+		[Embed(source = "assets/page/login/join1/female.png")]
+		private var FEMALE:Class;
+		[Embed(source = "assets/page/login/join1/female_on.png")]
+		private var FEMALE_ON:Class;
+		
+		private var _listSprite:Vector.<Sprite>;
+				
+		private var _touchList:TouchList;
+		
+		private var _currentTarget:DisplayObject;
+		private var _keyboardHeight:Number;
+		private var _dialogHeight:Number;
+		
+		private var _txtUserPassword:AppTextField
+		private var _txtUserRepassword:AppTextField;
+		private var _txtPasswordCheck:TextField;
+		
+		public function Join1()
+		{
+			super();
+			
+			Elever.Main.TopMenu.clearAddedChild();
+			
+			var bmpTitle:Bitmap=new TITLE;
+			bmpTitle.smoothing=true;
+			Elever.Main.TopMenu.Title=bmpTitle;
+			
+			var buttonClose:Bitmap=new BUTTON_CLOSE;
+			buttonClose.smoothing=true;
+			var buttonCloseOn:Bitmap=new BUTTON_CLOSE_ON;
+			buttonCloseOn.smoothing=true;
+			Elever.Main.TopMenu.LeftButton=new SimpleButton(buttonClose,buttonClose,buttonCloseOn,buttonClose);
+			Elever.Main.TopMenu.LeftButton.addEventListener(MouseEvent.CLICK,close_onClick);
+			
+			var buttonNext:Bitmap=new BUTTON_NEXT;
+			buttonNext.smoothing=true;
+			var buttonNextOn:Bitmap=new BUTTON_NEXT_ON;
+			buttonNextOn.smoothing=true;
+			Elever.Main.TopMenu.RightButton=new SimpleButton(buttonNext,buttonNext,buttonNextOn,buttonNext);
+			Elever.Main.TopMenu.RightButton.alpha=0.2;
+			Elever.Main.TopMenu.RightButton.addEventListener(MouseEvent.CLICK,next_onClick);
+			
+			var status:Bitmap=new STATUS;
+			status.smoothing=true;
+			status.y=Elever.Main.TopMenu.Background.height-7;
+			Elever.Main.TopMenu.addChild(status);
+			
+			var txt:AppTextField,fmt:TextFormat;
+			
+			_listSprite=new Vector.<Sprite>(2,true);
+			_listSprite[0]=new Sprite;
+			var join1_1:Bitmap=new JOIN1_1;
+			join1_1.smoothing=true;
+			_listSprite[0].addChild(join1_1);
+			
+			//user_email
+			txt=new AppTextField;
+			txt.name="user_email";
+			txt.softKeyboardType=SoftKeyboardType.EMAIL;
+			txt.returnKeyLabel=ReturnKeyLabel.NEXT;
+			txt.x=45; txt.y=86; txt.width=376; txt.height=46;
+			txt.fontSize=txt.height/1.3;
+			_listSprite[0].addChild(txt);
+			
+			//user_password
+			txt=new AppTextField;
+			_txtUserPassword=txt;
+			txt.name="user_password";
+			txt.returnKeyLabel=ReturnKeyLabel.NEXT;
+			txt.displayAsPassword=true;
+			txt.x=45; txt.y=190; txt.width=376; txt.height=46;
+			txt.fontSize=txt.height/1.3;
+			_listSprite[0].addChild(txt);
+			
+			//user_repassword
+			txt=new AppTextField;
+			_txtUserRepassword=txt;
+			txt.name="user_repassword";
+			txt.returnKeyLabel=ReturnKeyLabel.NEXT;
+			txt.displayAsPassword=true;
+			txt.x=45; txt.y=289; txt.width=376; txt.height=46;
+			txt.fontSize=txt.height/1.3;
+			_listSprite[0].addChild(txt);
+			
+			_txtPasswordCheck=new TextField;
+			_txtPasswordCheck.type=TextFieldType.DYNAMIC;
+			_txtPasswordCheck.x=110; _txtPasswordCheck.y=349; _txtPasswordCheck.width=243; _txtPasswordCheck.height=21;
+			fmt=_txtPasswordCheck.defaultTextFormat; fmt.font="Main"; fmt.size=_txtPasswordCheck.height/1.3; fmt.align=TextFormatAlign.CENTER; _txtPasswordCheck.defaultTextFormat=fmt;
+			_txtPasswordCheck.embedFonts=true;
+			_txtPasswordCheck.antiAliasType=AntiAliasType.ADVANCED;
+			_listSprite[0].addChild(_txtPasswordCheck);
+			
+			
+			_listSprite[1]=new Sprite;
+			var join1_2:Bitmap=new JOIN1_2;
+			join1_2.smoothing=true;
+			_listSprite[1].addChild(join1_2);
+			
+			//user_nickname
+			txt=new AppTextField;
+			txt.name="user_nickname";
+			txt.returnKeyLabel=ReturnKeyLabel.NEXT;
+			txt.x=45; txt.y=94; txt.width=376; txt.height=46;
+			txt.fontSize=txt.height/1.3;
+			_listSprite[1].addChild(txt);
+			
+			//user_birthday
+			var txtBirthday:TextField=new TextField;
+			txtBirthday.name="user_birthday";
+			txtBirthday.type=TextFieldType.DYNAMIC;
+			txtBirthday.x=45; txtBirthday.y=195; txtBirthday.width=376; txtBirthday.height=46;
+			fmt=txtBirthday.defaultTextFormat; fmt.font="Main"; fmt.size=txtBirthday.height/1.3; txtBirthday.defaultTextFormat=fmt;
+			txtBirthday.embedFonts=true;
+			txtBirthday.antiAliasType=AntiAliasType.ADVANCED;
+			//txt.addEventListener(FocusEvent.FOCUS_IN,birthday_onFocus);
+			txtBirthday.addEventListener(MouseEvent.CLICK,birthday_onFocus);
+			_listSprite[1].addChild(txtBirthday);
+			
+			//male or female
+			var maleButton:TabbedButton=new TabbedButton(new MALE,new MALE,new MALE_ON);
+			maleButton.name="male"
+			maleButton.addEventListener(MouseEvent.CLICK,male_onClick);
+			maleButton.x=157; maleButton.y=258;
+			_listSprite[1].addChild(maleButton);
+			
+			var femaleButton:TabbedButton=new TabbedButton(new FEMALE,new FEMALE,new FEMALE_ON);
+			femaleButton.name="female"
+			femaleButton.addEventListener(MouseEvent.CLICK,female_onClick);
+			femaleButton.x=295; femaleButton.y=259;
+			_listSprite[1].addChild(femaleButton);
+			
+			
+			for(var i:int=0;i<_listSprite.length;i++){
+				//_listSprite[i].cacheAsBitmap=true;
+				for(var j:int=0;j<_listSprite[i].numChildren;j++){
+					if(_listSprite[i].getChildAt(j) is AppTextField){
+						txt=_listSprite[i].getChildAt(j) as AppTextField;
+						
+						txt.addEventListener(Event.CHANGE,txt_onChange);
+						txt.addEventListener(MouseEvent.CLICK,txt_onClick);
+						txt.addEventListener(SoftKeyboardEvent.SOFT_KEYBOARD_ACTIVATE,txt_onSoftkeyboard);
+						txt.addEventListener(SoftKeyboardEvent.SOFT_KEYBOARD_DEACTIVATE,txt_onSoftkeyboard);
+					}
+				}
+			}
+			
+			
+			Elever.Main.TopMenuVisible=true;
+			Elever.Main.BottomMenuVisible=false;
+			
+			_dialogHeight=0;
+			_keyboardHeight=0;
+			
+			_touchList = new TouchList(Elever.Main.PageWidth,Elever.Main.PageHeight);
+			_touchList.addEventListener(Event.ADDED_TO_STAGE,touchList_onAdded);
+			addChild(_touchList);
+		}
+		
+		private function touchList_onAdded(e:Event):void{
+			_touchList.removeListItems();
+			onResize();
+			_touchList.addListItem(new SpaceItemRenderer(20));
+			for(var i:int = 0; i < _listSprite.length; i++) {
+				_listSprite[i].x=_touchList.width/2-_listSprite[i].width/2
+				_touchList.addListItem(new DisplayObjectItemRenderer(_listSprite[i]));
+				_touchList.addListItem(new SpaceItemRenderer(20));
+			}
+		}
+		
+		private function birthday_onFocus(e:Event):void{			
+			var txt:TextField=e.currentTarget as TextField;
+			var startPoint:Point=new Point(txt.width/2,txt.height/2);
+			startPoint=txt.localToGlobal(startPoint);
+			startPoint=Elever.Main.globalToLocal(startPoint);
+			
+			var curDate:Date=new Date;
+			var dateArr:Array=txt.text.split("-");
+			if(dateArr.length==3){
+				curDate.setFullYear(parseInt(dateArr[0]),parseInt(dateArr[1])-1,parseInt(dateArr[2]));
+			}
+			
+			if(Capabilities.os.indexOf("Linux")==0){ //Android
+			}
+			else if(Capabilities.os.indexOf("iPhone")==0){ //iOS
+				_currentTarget=e.currentTarget as DisplayObject;
+				_dialogHeight=405;//480/Elever.Main.scaleY;
+				onResize();
+				_touchList.ScrollTop=_currentTarget.parent.parent.y+_currentTarget.y+_currentTarget.height/2-_touchList.ScrollArea/2;
+			}
+			
+			var dateDialog:NativeDatePickerDialog = new NativeDatePickerDialog();
+			dateDialog.addEventListener(NativeDialogEvent.CLOSED,onCloseDialog);
+			//dateDialog.addEventListener(Event.CHANGE,onBirthday);
+			dateDialog.buttons = Vector.<String>(["확인"]);
+			dateDialog.displayMode =NativeDatePickerDialog.DISPLAY_MODE_DATE;
+			//dateDialog.title = "DatePicker";
+			//dateDialog.message = "Select date:";
+			dateDialog.date = curDate;
+			dateDialog.show(false);
+		}
+		
+		private function onCloseDialog(e:NativeDialogEvent):void{
+			_currentTarget=null;
+			_dialogHeight=0;
+			onResize();
+			
+			var target:NativeDatePickerDialog = NativeDatePickerDialog(e.target);
+			target.removeEventListener(NativeDialogEvent.CLOSED,onCloseDialog);
+			
+			var date:Date = target.date;
+			var dateArr:Array=[date.fullYear.toString(),(date.month+1).toString(),date.date.toString()]
+			if(dateArr[1].length<2) dateArr[1]="0"+dateArr[1];
+			if(dateArr[2].length<2) dateArr[2]="0"+dateArr[2];
+			
+			var txt:TextField=_listSprite[1].getChildByName("user_birthday") as TextField;	
+			txt.text=dateArr.join("-");
+			
+			checkNext();
+		}
+		
+		private function male_onClick(e:MouseEvent):void{
+			(_listSprite[1].getChildByName("male") as TabbedButton).isTabbed=true;
+			(_listSprite[1].getChildByName("female") as TabbedButton).isTabbed=false;
+			checkNext();
+		}
+		private function female_onClick(e:MouseEvent):void{
+			(_listSprite[1].getChildByName("male") as TabbedButton).isTabbed=false;
+			(_listSprite[1].getChildByName("female") as TabbedButton).isTabbed=true;
+			checkNext();
+		}
+		
+		private function txt_onChange(e:Event):void{
+			if(e.currentTarget==_txtUserPassword.stageText || e.currentTarget==_txtUserRepassword.stageText){
+				var fmt:TextFormat=_txtPasswordCheck.defaultTextFormat;
+				fmt.color=0x000000;
+				_txtPasswordCheck.defaultTextFormat=fmt;
+				_txtPasswordCheck.text="";
+				if(_txtUserPassword.text.length>0 && _txtUserRepassword.text.length>0){
+					if(_txtUserPassword.text != _txtUserRepassword.text){
+						fmt.color=0xFF0000;
+						_txtPasswordCheck.defaultTextFormat=fmt;
+						_txtPasswordCheck.text="입력하신 비밀번호가 맞지않습니다.";
+					}
+					else{
+						fmt.color=0x0000FF;
+						_txtPasswordCheck.defaultTextFormat=fmt;
+						_txtPasswordCheck.text="입력하신 비밀번호가 일치합니다.";	
+					}
+				}
+			}
+				
+			checkNext();
+		}
+		
+		private function txt_onClick(e:MouseEvent):void{
+			_currentTarget=e.currentTarget as DisplayObject;
+		}
+		
+		private function txt_onSoftkeyboard(e:SoftKeyboardEvent):void{
+			_keyboardHeight=stage.softKeyboardRect.height/Elever.Main.scaleY;
+			onResize();
+			if(e.type==SoftKeyboardEvent.SOFT_KEYBOARD_DEACTIVATE){
+				_currentTarget=null;
+			}
+			else{
+				_touchList.ScrollTop=_currentTarget.parent.parent.y+_currentTarget.y+_currentTarget.height/2-_touchList.ScrollArea/2;
+				if(_currentTarget is AppTextField){
+					(_currentTarget as AppTextField).focus();
+				}
+			}
+		}
+				
+		private function close_onClick(e:MouseEvent):void{
+			Elever.Main.TopMenu.LeftButton.removeEventListener(MouseEvent.CLICK,close_onClick);
+			
+			Elever.Main.setPage("eleverUserLoginPage",null,EleverPageEffect.RIGHT,EleverPageEffect.RIGHT);
+		}
+		
+		private function next_onClick(e:MouseEvent):void{
+			if(checkNext()){
+				Elever.Main.LoadingVisible=true;
+				
+				var params:URLVariables=new URLVariables;
+				
+				for(var i:int=0;i<_listSprite.length;i++){
+					for(var j:int=0;j<_listSprite[i].numChildren;j++){
+						if(_listSprite[i].getChildAt(j) is AppTextField){
+							var apptxt:AppTextField=_listSprite[i].getChildAt(j) as AppTextField;
+							params[apptxt.name]=apptxt.text;
+						}
+						else if(_listSprite[i].getChildAt(j) is TextField){
+							if(_listSprite[i].getChildAt(j)==_txtPasswordCheck) continue;
+							var txt:TextField=_listSprite[i].getChildAt(j) as TextField;
+							params[txt.name]=txt.text;
+						}
+					}
+				}
+				if((_listSprite[1].getChildByName("male") as TabbedButton).isTabbed) params.user_sex=1;
+				else if((_listSprite[1].getChildByName("female") as TabbedButton).isTabbed) params.user_sex=0;
+				params.user_birthday=params.user_birthday.replace(/-/g,"");
+				
+				Elever.Connection.post("eleverUserRegAction.tiein",params,onRegComplete);
+			}
+			else{
+				
+			}
+		}
+		private function onRegComplete(data:String):void{
+			Elever.Main.LoadingVisible=false;
+			
+			if(data){
+				var result:Object=JSON.parse(data);
+				
+				if(result.j_errorMsg.length>0){
+					new Alert(result.j_errorMsg).show();
+					return;
+				}
+				
+				if(result.j_user_emailYn=="y"){
+					new Alert("이메일 중복").show();
+					return;
+				}
+				else if(result.nextPage!=Elever.Main.PageName){
+					Elever.Account={user_email:Elever.Connection.CurrentParameters.user_email , user_password:Elever.Connection.CurrentParameters.user_password };
+					Elever.UserInfo={ user_seq:result.j_user_seq };
+					Elever.saveEnviroment();
+					
+					Elever.Main.setPage(result.nextPage);
+					return;
+				}
+			}
+			
+			new Alert("사용자 생성 실패").show();
+		}
+		
+		private function checkNext():Boolean{
+			var fmt:TextFormat;
+			var emailPattern : RegExp = /^[0-9a-zA-Z][-._a-zA-Z0-9]*@([0-9a-zA-Z][-._0-9a-zA-Z]*\.)+[a-zA-Z]{2,4}$/;
+			
+			Elever.Main.TopMenu.RightButton.alpha=0.2;
+			
+			if((_listSprite[0].getChildByName("user_email") as AppTextField).text.match(emailPattern)==null) return false;
+			if(_txtUserPassword.text.length==0) return false;
+			if(_txtUserPassword.text != _txtUserRepassword.text) return false;
+			
+			if((_listSprite[1].getChildByName("user_nickname") as AppTextField).text.length==0) return false;
+			if((_listSprite[1].getChildByName("user_birthday") as TextField).text.length==0) return false;
+			if(!(_listSprite[1].getChildByName("male") as TabbedButton).isTabbed && !(_listSprite[1].getChildByName("female") as TabbedButton).isTabbed) return false;
+			
+			Elever.Main.TopMenu.RightButton.alpha=1.0;
+			
+			return true;
+		}
+		
+		public override function dispose():void{
+			_touchList.removeListItems();
+			_touchList.removeEventListener(Event.ADDED_TO_STAGE,touchList_onAdded);
+			removeChild(_touchList);
+			_touchList=null;
+			
+			for(var i:int=0;i<_listSprite.length;i++){
+				while(_listSprite[i].numChildren>0){
+					if(_listSprite[i].getChildAt(0) is AppTextField){
+						var txt:AppTextField=_listSprite[i].getChildAt(0) as AppTextField;
+						
+						txt.removeEventListener(Event.CHANGE,txt_onChange);
+						txt.removeEventListener(MouseEvent.CLICK,txt_onClick);
+						txt.removeEventListener(SoftKeyboardEvent.SOFT_KEYBOARD_ACTIVATE,txt_onSoftkeyboard);
+						txt.removeEventListener(SoftKeyboardEvent.SOFT_KEYBOARD_DEACTIVATE,txt_onSoftkeyboard);
+					}
+					else if(_listSprite[i].getChildAt(0).name=="user_birthday"){
+						_listSprite[i].getChildAt(0).removeEventListener(MouseEvent.CLICK,birthday_onFocus);
+					}
+					else if(_listSprite[i].getChildAt(0).name=="male"){
+						_listSprite[i].getChildAt(0).removeEventListener(MouseEvent.CLICK,male_onClick);
+					}
+					else if(_listSprite[i].getChildAt(0).name=="female"){
+						_listSprite[i].getChildAt(0).removeEventListener(MouseEvent.CLICK,female_onClick);
+					}
+					_listSprite[i].removeChildAt(0);
+				}
+				if(_listSprite[i].parent)_listSprite[i].parent.removeChild(_listSprite[i]);
+				_listSprite[i]=null;
+			}
+			_listSprite.splice(0,_listSprite.length);
+			_listSprite=null;
+			
+			_txtUserPassword=null;
+			_txtUserRepassword=null;
+			_txtPasswordCheck=null;
+			
+			Elever.Main.TopMenu.LeftButton.removeEventListener(MouseEvent.CLICK,close_onClick);
+			Elever.Main.TopMenu.RightButton.removeEventListener(MouseEvent.CLICK,next_onClick );
+		}
+		
+		public override function onResize():void{			
+			_touchList.resize(Elever.Main.PageWidth,Elever.Main.PageHeight-_keyboardHeight-_dialogHeight);
+		}
+	}
+}

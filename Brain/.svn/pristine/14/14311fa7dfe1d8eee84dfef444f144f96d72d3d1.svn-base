@@ -1,0 +1,323 @@
+package Popup
+{
+	import com.thanksmister.touchlist.controls.TouchList;
+	import com.thanksmister.touchlist.renderers.DisplayObjectItemRenderer;
+	
+	import flash.display.Bitmap;
+	import flash.display.Sprite;
+	import flash.events.Event;
+	import flash.events.MouseEvent;
+	import flash.events.TimerEvent;
+	import flash.geom.Point;
+	import flash.text.AntiAliasType;
+	import flash.text.TextField;
+	import flash.text.TextFieldAutoSize;
+	import flash.text.TextFieldType;
+	import flash.text.TextFormat;
+	import flash.utils.Timer;
+	
+	import mx.utils.StringUtil;
+	
+	import flashx.textLayout.formats.TextAlign;
+	
+	import kr.pe.hs.ui.AppTextField;
+	import kr.pe.hs.ui.TabbedButton;
+	import kr.pe.hs.util.HangulUtil;
+
+	public class PhoneCodePopup extends BasePopup
+	{
+		[Embed(source = "assets/bg.png")]
+		private const BG:Class;		
+		private var _bg:Bitmap;
+		
+		[Embed(source = "assets/popup/phonecode/title.png")]
+		private const TITLE:Class;		
+		private var _title:Bitmap;
+		
+		[Embed(source = "assets/popup/phonecode/search.png")]
+		private const SEARCH:Class;		
+		private var _search:Bitmap;
+		
+		private var _txtSearch:AppTextField;
+		private var _searchHelper:TextField;		
+		private var _searchTimer:Timer;
+		
+		[Embed(source = "assets/popup/phonecode/item.png")]
+		private const ITEM:Class;
+		
+		[Embed(source = "assets/popup/phonecode/checkbox.png")]
+		private const CHECKBOX:Class;
+		[Embed(source = "assets/popup/phonecode/checkbox_on.png")]
+		private const CHECKBOX_ON:Class;
+		
+		[Embed(source = "assets/popup/phonecode/submit.png")]
+		private const SUBMIT:Class;
+		[Embed(source = "assets/popup/phonecode/submit_on.png")]
+		private const SUBMIT_ON:Class;
+		
+		private var _width:Number;
+		private var _height:Number;
+		private var _touchList:TouchList;
+		
+		private var _buttonSubmit:TabbedButton;
+		
+		private var _currentSelectedItem:Sprite;
+		private var _data:Vector.<String>;
+		
+		private var _lastDownPointY:Number;
+		
+		private var _defaultValue:String;
+		private var _callback:Function;
+		
+		public function PhoneCodePopup(callback:Function,defaultValue:String="")
+		{
+			super();
+			
+			_width=Elever.Main.FullWidth;
+			_height=Elever.Main.FullHeight;
+			
+			_bg=new BG;
+			_bg.smoothing=true;
+			addChild(_bg);
+			
+			_title=new TITLE;
+			_title.smoothing=true;
+			addChild(_title);
+			
+			_search=new SEARCH;
+			_search.smoothing=true;
+			addChild(_search);
+			
+			_searchHelper=new TextField;
+			_searchHelper.type=TextFieldType.DYNAMIC;
+			var fmt:TextFormat=_searchHelper.defaultTextFormat;
+			fmt.font="Main";
+			fmt.size=20;
+			fmt.color=0xACACAC;
+			_searchHelper.defaultTextFormat=fmt;
+			_searchHelper.selectable=false;
+			_searchHelper.embedFonts=true;
+			_searchHelper.antiAliasType=AntiAliasType.ADVANCED;
+			_searchHelper.autoSize=TextFieldAutoSize.LEFT;
+			_searchHelper.text="검색창";
+			addChild(_searchHelper);
+			
+			_txtSearch=new AppTextField;
+			_txtSearch.width=430;
+			_txtSearch.height=42;
+			_txtSearch.textAlign=TextAlign.LEFT;
+			_txtSearch.fontSize=_txtSearch.height/1.3;
+			_txtSearch.addEventListener(Event.CHANGE,txtSearch_onChange);
+			_txtSearch.text="";
+			addChild(_txtSearch);
+			
+			var bmpSubmit:Bitmap=new SUBMIT;
+			bmpSubmit.smoothing=true;
+			var bmpSubmit_on:Bitmap=new SUBMIT_ON;
+			bmpSubmit_on.smoothing=true;
+			_buttonSubmit=new TabbedButton(bmpSubmit,bmpSubmit_on,bmpSubmit_on);
+			_buttonSubmit.addEventListener(MouseEvent.CLICK,submit_onClick);
+			addChild(_buttonSubmit);
+			
+			_touchList=new TouchList(_width,_height);
+			_touchList.addEventListener(Event.ADDED_TO_STAGE,onAdded);
+			addChild(_touchList);
+			
+			_currentSelectedItem=null;
+			_data=Vector.<String>(
+				[
+					"미국/캐나다,+1",
+					"영국,+44",
+					"일본,+81",
+					"중국,+86",
+					"타이,+66",
+					"필리핀,+63",
+					"한국,+82",
+					"호주,+61",
+					"홍콩,+852",
+				]
+			);
+
+			_callback=callback;
+			_defaultValue=defaultValue;
+		}
+		
+		private function onAdded(e:Event=null):void{
+			var item:DisplayObjectItemRenderer;
+			var txtName:TextField,txtCode:TextField;
+			var fmt:TextFormat;
+			var itemSprite:Sprite;
+			var bmpCheckbox:Bitmap;
+			var bmpCheckbox_on:Bitmap;
+			var checkBox:TabbedButton;
+			var countryName:String,countryChosung:String,countryCode:String,searchText:String;
+			
+			searchText=StringUtil.trim(_txtSearch.text).toUpperCase();
+			
+			_touchList.removeListItems();
+			for(var i:uint=0;i<_data.length;i++){
+				countryName=_data[i].split(",")[0];
+				countryChosung=HangulUtil.getChosung(countryName);
+				countryCode=_data[i].split(",")[1];
+				
+				if(_txtSearch.text.length>0){
+					if(countryName.toUpperCase().indexOf(searchText)<0 && countryChosung.indexOf(searchText)<0) continue;
+				}
+				
+				item=new DisplayObjectItemRenderer;
+				
+				itemSprite=new Sprite;
+				itemSprite.mouseChildren=false;
+				itemSprite.buttonMode=true;
+				
+				var itemBg:Bitmap=new ITEM;
+				itemBg.smoothing=true;
+				itemSprite.addChild(itemBg);
+				
+				bmpCheckbox=new CHECKBOX;
+				bmpCheckbox.smoothing=true;
+				bmpCheckbox_on=new CHECKBOX_ON;
+				bmpCheckbox_on.smoothing=true;
+				checkBox=new TabbedButton(bmpCheckbox,bmpCheckbox,bmpCheckbox_on);
+				checkBox.name="checkbox";
+				checkBox.x=20;
+				checkBox.y=56/2-checkBox.height/2;
+				itemSprite.addChild(checkBox);
+				
+				txtName=new TextField;
+				txtName.cacheAsBitmap=true;
+				txtName.name="name";
+				txtName.type=TextFieldType.DYNAMIC;
+				txtName.multiline=false;
+				txtName.selectable=false;
+				fmt=txtName.defaultTextFormat;
+				fmt.font="Main";
+				fmt.color=0x595959;
+				fmt.size=22;
+				txtName.defaultTextFormat=fmt;
+				txtName.antiAliasType=AntiAliasType.ADVANCED;
+				txtName.embedFonts=true;
+				txtName.autoSize=TextFieldAutoSize.RIGHT;
+				txtName.text=countryName;
+				txtName.x=checkBox.x+checkBox.width+20;
+				txtName.y=56/2-txtName.height/2;
+				itemSprite.addChild(txtName);
+				
+				txtCode=new TextField;
+				txtCode.cacheAsBitmap=true;
+				txtCode.name="code";
+				txtCode.type=TextFieldType.DYNAMIC;
+				txtCode.multiline=false;
+				txtCode.selectable=false;
+				fmt=txtCode.defaultTextFormat;
+				fmt.font="Main";
+				fmt.color=0x595959;
+				fmt.size=22;
+				txtCode.defaultTextFormat=fmt;
+				txtCode.antiAliasType=AntiAliasType.ADVANCED;
+				txtCode.embedFonts=true;
+				txtCode.autoSize=TextFieldAutoSize.LEFT;
+				txtCode.text=countryCode;
+				txtCode.x=540-txtCode.width-40;
+				txtCode.y=56/2-txtCode.height/2;
+				itemSprite.addChild(txtCode);
+				
+				if(txtCode.text==_defaultValue){
+					_currentSelectedItem=itemSprite;
+					checkBox.isTabbed=true;
+				}
+				
+				itemSprite.addEventListener(MouseEvent.CLICK,item_onClick);
+				itemSprite.addEventListener(MouseEvent.MOUSE_DOWN,item_onDown);
+				
+				item.data=itemSprite;
+				
+				_touchList.addListItem(item);
+			}
+		}
+		
+		private function onSearch(e:TimerEvent):void{
+			_searchTimer.stop();
+			_searchTimer=null;
+			onAdded();
+		}
+		
+		private function txtSearch_onChange(e:Event):void{
+			if(_txtSearch.text.length==0){
+				_searchHelper.visible=true;
+				if(_searchTimer){
+					_searchTimer.stop();
+					_searchTimer.start();
+				}
+				else{
+					_searchTimer=new Timer(300,1);
+					_searchTimer.addEventListener(TimerEvent.TIMER,onSearch);
+					_searchTimer.start();
+				}
+			}
+			else{
+				if(_searchTimer){
+					_searchTimer.stop();
+					_searchTimer=null;
+				}
+				_searchHelper.visible=false;
+				onAdded();
+			}
+		}
+		
+		private function submit_onClick(e:MouseEvent):void{
+			_callback((_currentSelectedItem.getChildByName("code") as TextField).text);
+			Elever.Main.closePopup();
+		}
+		
+		private function item_onDown(e:MouseEvent):void{
+			_lastDownPointY=e.stageY;
+		}
+		 
+		private function item_onClick(e:MouseEvent):void{
+			if(Math.abs(_lastDownPointY-e.stageY)>10){
+				return;
+			}
+			
+			if(_currentSelectedItem){
+				(_currentSelectedItem.getChildByName("checkbox") as TabbedButton).isTabbed=false;
+			}
+			
+			_currentSelectedItem=e.currentTarget as Sprite;
+			(_currentSelectedItem.getChildByName("checkbox") as TabbedButton).isTabbed=true;
+		}
+		
+		public override function onResize():void
+		{
+			_width=Elever.Main.FullWidth;
+			_height=Elever.Main.FullHeight;
+			
+			_bg.width=_width;
+			_bg.height=_height;
+			
+			_title.x=0;
+			_title.y=0;
+			
+			_search.x=0;
+			_search.y=_title.height;
+			
+			_searchHelper.x=_search.x+75;
+			_searchHelper.y=_search.y+23;
+			
+			_txtSearch.x=_search.x+69;
+			_txtSearch.y=_search.y+14;
+			
+			_buttonSubmit.x=_width/2-_buttonSubmit.width/2;
+			_buttonSubmit.y=_height-_buttonSubmit.height-53;
+			
+			_touchList.x=0;
+			_touchList.y=_search.y+_search.height;
+			_touchList.resize(_width,_height-_touchList.y-127);
+		}
+		
+		public override function dispose():void
+		{
+			
+		}
+	}
+}

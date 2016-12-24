@@ -1,0 +1,530 @@
+package Page.Login
+{	
+	import flash.display.Bitmap;
+	import flash.display.SimpleButton;
+	import flash.display.Sprite;
+	import flash.events.Event;
+	import flash.events.FocusEvent;
+	import flash.events.KeyboardEvent;
+	import flash.events.MouseEvent;
+	import flash.events.SoftKeyboardEvent;
+	import flash.geom.Rectangle;
+	import flash.net.URLVariables;
+	import flash.text.ReturnKeyLabel;
+	import flash.text.SoftKeyboardType;
+	import flash.text.StageText;
+	import flash.text.TextFormat;
+	import flash.ui.Keyboard;
+	import flash.utils.setTimeout;
+	
+	import Page.BasePage;
+	
+	import Popup.TermsPopup;
+	
+	import kr.pe.hs.tween.Tween;
+	
+	public class Index extends BasePage
+	{
+		[Embed(source = "assets/page/login/index/bg.png")]
+		private var LOGIN_BG:Class;
+		
+		[Embed(source = "assets/page/login/index/logo.png")]
+		private var LOGIN_LOGO:Class;
+		[Embed(source = "assets/page/login/index/logo_text.png")]
+		private var LOGO_TEXT:Class;
+		
+		[Embed(source = "assets/page/login/index/company.png")]
+		private var SPLASH_COMPANY:Class;
+		
+		[Embed(source = "assets/page/login/index/textfield.png")]
+		private var TEXTFIELD_BG:Class;
+		
+		[Embed(source = "assets/page/login/index/id_helper.png")]
+		private var ID_HELPER:Class;
+		
+		[Embed(source = "assets/page/login/index/password_helper.png")]
+		private var PASSWORD_HELPER:Class;
+		
+		[Embed(source = "assets/page/login/index/button_login.png")]
+		private var BUTTON_LOGIN:Class;
+		
+		[Embed(source = "assets/page/login/index/button_join.png")]
+		private var BUTTON_JOIN:Class;
+		
+		[Embed(source = "assets/page/login/index/button_find.png")]
+		private var BUTTON_FIND:Class;
+		
+		private static var _firstRun:Boolean=true;
+		
+		private var _isSplashScreen:Boolean;
+		
+		//공통 화면
+		private var _bg:Bitmap;
+		
+		private var _logo:Bitmap;
+		private var _logoTween:Tween;
+		
+		//로그인 화면
+		private var _txtID:StageText;
+		private var _areaID:Bitmap;
+		private var _txtPassword:StageText;
+		private var _areaPassword:Bitmap;
+		private var _helperID:Bitmap;
+		private var _helperPassword:Bitmap;
+		
+		private var _loginButton:SimpleButton;
+		private var _loginButtonBitmap:Bitmap;
+		private var _joinButton:SimpleButton;
+		private var _joinButtonBitmap:Bitmap;
+		private var _findButton:SimpleButton;
+		private var _findButtonBitmap:Bitmap;
+		
+		private var _loginObjects:Sprite;
+		private var _loginObjectsTween:Tween;		
+		
+		//스플래시 화면
+		private var _logoText:Bitmap;
+		
+		private var _splashCompany:Bitmap;
+		
+		private var _splashObjects:Sprite;
+		private var _splashObjectsTween:Tween;
+		
+		public function Index()
+		{
+			super();
+			
+			Elever.Main.TopMenuVisible=false;
+			Elever.Main.BottomMenuVisible=false;
+			
+			var fmt:TextFormat;
+			
+			_bg=new LOGIN_BG;
+			_bg.smoothing=true;
+			addChild(_bg);
+			
+			_logo=new LOGIN_LOGO;
+			_logo.smoothing=true;
+			addChild(_logo);
+			
+			
+			_loginObjects=new Sprite;
+			_loginObjects.mouseChildren=false;
+			_loginObjects.tabChildren=false;
+			_loginObjects.visible=false;
+			addChild(_loginObjects);
+			
+			_areaID=new TEXTFIELD_BG;
+			_areaID.smoothing=true;
+			_loginObjects.addChild(_areaID);
+			
+			_helperID=new ID_HELPER;
+			_helperID.smoothing=true;
+			_loginObjects.addChild(_helperID);
+						
+			_txtID=new StageText;
+			_txtID.visible=false;
+			_txtID.softKeyboardType=SoftKeyboardType.EMAIL;
+			_txtID.returnKeyLabel=ReturnKeyLabel.NEXT;
+			_txtID.fontFamily="Arial";
+			_txtID.addEventListener(Event.CHANGE,txtID_onChange);
+			_txtID.addEventListener(KeyboardEvent.KEY_DOWN,txtID_onKeyDown);
+			_txtID.addEventListener(FocusEvent.FOCUS_IN,onSoftkeyboard);
+			//_txtID.addEventListener(FocusEvent.FOCUS_OUT,onFocusOut);
+			_txtID.addEventListener(SoftKeyboardEvent.SOFT_KEYBOARD_ACTIVATE,onSoftkeyboard);
+			_txtID.addEventListener(SoftKeyboardEvent.SOFT_KEYBOARD_DEACTIVATE,onSoftkeyboard);
+			
+			_areaPassword=new TEXTFIELD_BG;
+			_areaPassword.smoothing=true;
+			_loginObjects.addChild(_areaPassword);
+			
+			_helperPassword=new PASSWORD_HELPER;
+			_helperPassword.smoothing=true;
+			_loginObjects.addChild(_helperPassword);
+			
+			_txtPassword=new StageText;
+			_txtPassword.visible=false;
+			_txtPassword.displayAsPassword=true;
+			_txtPassword.returnKeyLabel=ReturnKeyLabel.GO;
+			_txtPassword.fontFamily="Arial";
+			_txtPassword.addEventListener(Event.CHANGE,txtPassword_onChange);
+			_txtPassword.addEventListener(KeyboardEvent.KEY_DOWN,txtPassword_onKeyDown);
+			_txtPassword.addEventListener(FocusEvent.FOCUS_IN,onSoftkeyboard);
+			//_txtPassword.addEventListener(FocusEvent.FOCUS_OUT,onFocusOut);
+			_txtPassword.addEventListener(SoftKeyboardEvent.SOFT_KEYBOARD_ACTIVATE,onSoftkeyboard);
+			_txtPassword.addEventListener(SoftKeyboardEvent.SOFT_KEYBOARD_DEACTIVATE,onSoftkeyboard);
+
+			_loginButtonBitmap=new BUTTON_LOGIN;
+			_loginButtonBitmap.smoothing=true;
+			_loginButton=new SimpleButton(_loginButtonBitmap,_loginButtonBitmap,_loginButtonBitmap,_loginButtonBitmap);
+			_loginButton.alpha=0.6;
+			_loginButton.addEventListener(MouseEvent.CLICK,login_onClick);
+			_loginObjects.addChild(_loginButton);
+			
+			_joinButtonBitmap=new BUTTON_JOIN;
+			_joinButtonBitmap.smoothing=true;
+			_joinButton=new SimpleButton(_joinButtonBitmap,_joinButtonBitmap,_joinButtonBitmap,_joinButtonBitmap);
+			_joinButton.addEventListener(MouseEvent.CLICK,join_onClick);
+			_loginObjects.addChild(_joinButton);
+			
+			_findButtonBitmap=new BUTTON_FIND;
+			_findButtonBitmap.smoothing=true;
+			_findButton=new SimpleButton(_findButtonBitmap,_findButtonBitmap,_findButtonBitmap,_findButtonBitmap);
+			_findButton.addEventListener(MouseEvent.CLICK,find_onClick);
+			_loginObjects.addChild(_findButton);
+			
+			if(_firstRun){
+				onResize();
+				
+				_isSplashScreen=true;
+				
+				_splashObjects=new Sprite;
+				addChild(_splashObjects);
+				
+				_splashCompany=new SPLASH_COMPANY;
+				_splashCompany.smoothing=true;
+				_splashObjects.addChild(_splashCompany);
+				
+				_logoText=new LOGO_TEXT;
+				_logoText.smoothing=true;
+				_splashObjects.addChild(_logoText);
+				
+				if(Elever.Account){
+					_txtID.text=Elever.Account.user_email;
+					_txtPassword.text=Elever.Account.user_password;
+					login();
+					
+					Elever.Main.LoadingVisible=false;
+				}
+				else{
+					setTimeout(initLoginScreen,1000);
+				}
+				_firstRun=false;
+			}
+			else{
+				initLoginScreen();
+			}
+		}
+		
+		public function initLoginScreen():void{
+			const pageWidth:Number=Elever.Main.PageWidth;
+			const pageHeight:Number=Elever.Main.PageHeight;
+			
+			if(_isSplashScreen){
+				_logoTween=new Tween(_logo.y,pageHeight/2-_logo.height-pageHeight*0.13709677419354838709677419354839,0,500,function(value:Number,isFinish:Boolean):void{
+					_logo.y=value;
+				});
+				_splashObjectsTween=new Tween(_splashObjects.alpha,0,0,500,function(value:Number,isFinish:Boolean):void{
+					_splashObjects.alpha=value;
+					if(isFinish) initLoginScreen();
+				});
+				
+				_isSplashScreen=false;
+			}
+			else{				
+				if(_splashObjects) _splashObjects.visible=false;				
+				_loginObjects.visible=true;
+				_txtID.visible=true;
+				_txtPassword.visible=true;
+				
+				_loginObjects.alpha=0;
+				_loginObjectsTween=new Tween(0,1,0,500,function(value:Number,isFinish:Boolean):void{
+					_loginObjects.alpha=value;
+					if(isFinish){
+						_loginObjects.mouseChildren=true;
+						_loginObjects.tabChildren=true;
+					}
+				});
+			}
+		}
+		
+		
+		private function onSoftkeyboard(e:Event):void{
+			if(stage.softKeyboardRect.height==0){
+				Elever.Main.y=0;
+			}
+			else{
+				var txt:StageText=e.target as StageText;
+				var globalRect:Rectangle=txt.viewPort;
+				Elever.Main.y+=-(globalRect.y+globalRect.height/2)+(stage.stageHeight-stage.softKeyboardRect.height)/2;
+				if(Elever.Main.y>0) Elever.Main.y=0;
+				else if(Elever.Main.y<-stage.softKeyboardRect.height) Elever.Main.y=-stage.softKeyboardRect.height;
+			}
+			
+			if(Elever.Main.LoadingVisible){
+				Elever.Main.onResize();
+			}
+			else{
+				onResize();
+			}
+		}
+		
+		private function txtID_onChange(e:Event):void{
+			if(_txtID.text.length==0){
+				_helperID.visible=true;
+			}
+			else{
+				_helperID.visible=false;
+			}
+			checkLogin();
+		}
+		private function txtID_onKeyDown(e:KeyboardEvent):void{
+			if(e.keyCode==Keyboard.NEXT || e.keyCode==Keyboard.ENTER){
+				_txtPassword.assignFocus();
+			}
+		}
+		private function txtPassword_onChange(e:Event):void{
+			if(_txtPassword.text.length==0){
+				_helperPassword.visible=true;
+			}
+			else{
+				_helperPassword.visible=false;
+			}
+			checkLogin();
+		}
+		private function txtPassword_onKeyDown(e:KeyboardEvent):void{
+			if(e.keyCode==Keyboard.ENTER){
+				login();
+			}
+		}
+		
+		private function checkLogin():Boolean{
+			var emailPattern : RegExp = /^[0-9a-zA-Z][-._a-zA-Z0-9]*@([0-9a-zA-Z][-._0-9a-zA-Z]*\.)+[a-zA-Z]{2,4}$/;
+			
+			if(_txtID.text.match(emailPattern)!=null && _txtPassword.text.length>0){
+				_loginButton.alpha=1;
+				return true;
+			}
+			
+			_loginButton.alpha=0.6;
+			return false;
+		}
+		
+		private function login_onClick(e:Event):void{
+			login();
+		}
+		
+		private function login():void{
+			if(!checkLogin()) return;
+			
+			Elever.Main.LoadingVisible=true;
+			
+			var params:URLVariables=new URLVariables;
+			params.user_email=_txtID.text;
+			//params.user_email="test1@test.com";
+			params.user_password=_txtPassword.text;
+			//params.user_password="test";
+			
+			Elever.Connection.post("eleverUserLoginAction.tiein",params,onLogin);
+		}
+		
+		private function onLogin(data:String):void{
+			Elever.Main.LoadingVisible=false;
+			
+			if(data){
+				var result:Object=JSON.parse(data);
+				
+				if(result.j_errorMsg.length>0){
+					new Alert(result.j_errorMsg).show();
+					return;
+				}
+				
+				
+				if(result.userInfoModelO){
+					Elever.UserInfo=result.userInfoModelO;
+					if(result.j_userStartYn=="y"){
+						result.nextPage="eleverWelcomePage";
+					}
+				}
+				else{
+					Elever.UserInfo={ 
+						user_seq:result.j_user_seq,
+						user_phonenum:result.j_user_phonenum,
+						couple_user_phonenum:result.j_couple_user_couplenum,
+						remain_time:result.j_remain_time
+					};
+				}
+				
+				if(result.nextPage!=Elever.Main.PageName){
+					//일단 로그인 성공
+					Elever.Account={user_email:_txtID.text, user_password:_txtPassword.text };
+					Elever.saveEnviroment();
+					
+					Elever.Main.setPage(result.nextPage);
+					return;
+				}
+			}
+			
+			new Alert("로그인 실패").show();
+			initLoginScreen();
+			onResize();
+		}
+		
+		private function join_onClick(e:Event):void{
+			_txtID.text="";
+			_helperID.visible=true;
+			_txtPassword.text="";
+			_helperPassword.visible=true;
+			Elever.Main.showPopup(new TermsPopup(onAgree));
+		}
+		private function onAgree():void{
+			Elever.Main.setPage("eleverUserRegPage");
+		}
+		
+		private function find_onClick(e:Event):void{
+			new Alert("준비중입니다.").show();
+		}
+		
+		public override function onResize():void{
+			const pageWidth:Number=Elever.Main.PageWidth;
+			const pageHeight:Number=Elever.Main.PageHeight;
+			
+			_bg.width=pageWidth;
+			_bg.height=pageHeight;
+			if(_bg.scaleX>_bg.scaleY) _bg.scaleY=_bg.scaleX;
+			else if(_bg.scaleY>_bg.scaleX) _bg.scaleX=_bg.scaleY;
+			_bg.x=pageWidth/2-_bg.width/2;
+			_bg.y=pageHeight/2-_bg.height/2;
+			
+			
+			_logo.x=pageWidth/2-_logo.width/2;
+			if(_isSplashScreen){
+				_logo.y=pageHeight/2-_logo.height;
+				
+				if(_logoText){
+					_logoText.x=pageWidth/2-_logoText.width/2;
+					_logoText.y=pageHeight/2+pageHeight*0.03433098591549295774647887323944;
+				}
+			}
+			else{
+				if(_logoTween){
+					_logoTween.endTween();
+					_logoTween=null;
+				}
+				else _logo.y=pageHeight/2-_logo.height-pageHeight*0.13709677419354838709677419354839;
+				
+				if(_splashObjectsTween){
+					_splashObjectsTween.endTween();
+					_splashObjectsTween=null;
+				}
+				if(_loginObjectsTween){
+					_loginObjectsTween.endTween();
+					_loginObjectsTween=null;
+				}
+			}
+			
+			_areaID.x=pageWidth/2-_areaID.width/2;
+			_areaID.y=pageHeight/2-_areaID.height-pageHeight*0.02;
+			_helperID.x=_areaID.x+_areaID.width*0.02;
+			_helperID.y=_areaID.y+_areaID.height/2-_helperID.height/2;
+			_areaPassword.x=pageWidth/2-_areaPassword.width/2;
+			_areaPassword.y=_areaID.y+_areaID.height+pageHeight*0.02;
+			_helperPassword.x=_areaPassword.x+_areaPassword.width*0.02;
+			_helperPassword.y=_areaPassword.y+_areaPassword.height/2-_helperPassword.height/2;
+			
+			//ID StageText 위치 설정
+			var rect:Rectangle,bounds:Rectangle;
+			bounds=_areaID.getBounds(stage);
+			rect=_txtID.viewPort;
+			rect.width=bounds.width*0.97;
+			rect.height=bounds.height*0.5;
+			rect.x=bounds.x+bounds.width/2-rect.width/2;
+			rect.y=bounds.y+bounds.height/2-rect.height/2;
+			_txtID.stage=stage;
+			_txtID.viewPort=rect;
+			_txtID.fontSize=_txtID.viewPort.height/1.2;
+			
+			//PASSWORD StageText 위치 설정
+			bounds=_areaPassword.getBounds(stage);
+			rect=_txtPassword.viewPort;
+			rect.width=bounds.width*0.97;
+			rect.height=bounds.height*0.5;
+			rect.x=bounds.x+bounds.width/2-rect.width/2;
+			rect.y=bounds.y+bounds.height/2-rect.height/2;
+			_txtPassword.stage=stage;
+			_txtPassword.viewPort=rect;
+			_txtPassword.fontSize=_txtPassword.viewPort.height/1.2;
+			
+			//버튼 위치 설정
+			_loginButton.x=_areaPassword.x;
+			_loginButton.y=_areaPassword.y+_areaPassword.height+pageHeight*0.02;
+			
+			_joinButton.x=_areaPassword.x+_areaPassword.width-_joinButton.width;
+			_joinButton.y=_areaPassword.y+_areaPassword.height+pageHeight*0.02;
+			
+			_findButton.x=pageWidth/2-_findButton.width/2;
+			_findButton.y=_joinButton.y+_joinButton.height+pageHeight*0.06;
+			
+			if(_splashCompany){
+				_splashCompany.x=pageWidth-pageWidth*0.05185185185185185185185185185185-_splashCompany.width;
+				_splashCompany.y=pageHeight-pageHeight*0.021875-_splashCompany.height;
+			}
+		}
+		
+		public override function dispose():void{
+			removeChild(_bg);
+			_bg=null;
+			removeChild(_logo);
+			_logo=null;
+			if(_logoTween) _logoTween.endTween();
+			_logoTween=null;
+			
+			
+			_loginObjects.removeChild(_areaID);
+			_areaID=null;
+			_txtID.removeEventListener(Event.CHANGE,txtID_onChange);
+			_txtID.removeEventListener(KeyboardEvent.KEY_DOWN,txtID_onKeyDown);
+			_txtID.removeEventListener(FocusEvent.FOCUS_IN,onSoftkeyboard);
+			_txtID.removeEventListener(SoftKeyboardEvent.SOFT_KEYBOARD_ACTIVATE,onSoftkeyboard);
+			_txtID.removeEventListener(SoftKeyboardEvent.SOFT_KEYBOARD_DEACTIVATE,onSoftkeyboard);
+			_txtID.stage=null;
+			_txtID.dispose();
+			_txtID=null;
+			
+			_loginObjects.removeChild(_areaPassword);
+			_areaPassword=null;
+			_txtPassword.removeEventListener(Event.CHANGE,txtPassword_onChange);
+			_txtPassword.removeEventListener(KeyboardEvent.KEY_DOWN,txtPassword_onKeyDown);
+			_txtPassword.removeEventListener(FocusEvent.FOCUS_IN,onSoftkeyboard);
+			_txtPassword.removeEventListener(SoftKeyboardEvent.SOFT_KEYBOARD_ACTIVATE,onSoftkeyboard);
+			_txtPassword.removeEventListener(SoftKeyboardEvent.SOFT_KEYBOARD_DEACTIVATE,onSoftkeyboard);
+			_txtPassword.stage=null;
+			_txtPassword.dispose();
+			_txtPassword=null;
+			
+			_loginObjects.removeChild(_helperID);
+			_helperID=null;
+			_loginObjects.removeChild(_helperPassword);
+			_helperPassword=null;
+			
+			_loginButton.removeEventListener(MouseEvent.CLICK,login_onClick);
+			_loginObjects.removeChild(_loginButton);
+			_loginButton=null;
+			_loginButtonBitmap=null;
+			_loginObjects.removeChild(_joinButton);
+			_joinButton=null;
+			_joinButtonBitmap=null;
+			_loginObjects.removeChild(_findButton);
+			_findButton=null;
+			_findButtonBitmap=null;
+			
+			removeChild(_loginObjects);
+			_loginObjects=null;
+			if(_loginObjectsTween) _loginObjectsTween.endTween();
+			_loginObjectsTween=null;
+			
+			if(_splashObjects){
+				_splashObjects.removeChild(_logoText);
+				_logoText=null;
+				
+				_splashObjects.removeChild(_splashCompany);
+				_splashCompany=null;
+				
+				removeChild(_splashObjects);
+				_splashObjects=null;
+			}
+			if(_splashObjectsTween) _splashObjectsTween.endTween();
+			_splashObjectsTween=null;
+		}
+	}
+}

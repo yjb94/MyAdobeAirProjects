@@ -1,0 +1,318 @@
+package Page.Chat
+{
+	import flash.display.Bitmap;
+	import flash.display.BitmapData;
+	import flash.display.Sprite;
+	import flash.text.AntiAliasType;
+	import flash.text.TextField;
+	import flash.text.TextFieldAutoSize;
+	import flash.text.TextFormat;
+	
+	public class TextBalloon extends Sprite
+	{
+		[Embed(source = "assets/page/chat/name.png")]
+		private static const NAME_MARK:Class;
+		
+		[Embed(source = "assets/page/chat/photo_bg.png")]
+		private static const PHOTO_BG:Class;
+		
+		[Embed(source = "assets/page/chat/time_bg.png")]
+		private static const TIME_BG:Class;
+		
+		[Embed(source = "assets/page/chat/read_yn.png")]
+		private static const READ_YN:Class;
+		
+		[Embed(source = "assets/page/chat/white_1.png")]
+		private static const WHITE_BALLOON_01:Class;
+		[Embed(source = "assets/page/chat/white_2.png")]
+		private static const WHITE_BALLOON_02:Class;
+		[Embed(source = "assets/page/chat/white_3.png")]
+		private static const WHITE_BALLOON_03:Class;
+		[Embed(source = "assets/page/chat/white_4.png")]
+		private static const WHITE_BALLOON_04:Class;
+		[Embed(source = "assets/page/chat/white_5.png")]
+		private static const WHITE_BALLOON_05:Class;
+		[Embed(source = "assets/page/chat/white_6.png")]
+		private static const WHITE_BALLOON_06:Class;
+		[Embed(source = "assets/page/chat/white_7.png")]
+		private static const WHITE_BALLOON_07:Class;
+		[Embed(source = "assets/page/chat/white_8.png")]
+		private static const WHITE_BALLOON_08:Class;
+		[Embed(source = "assets/page/chat/white_9.png")]
+		private static const WHITE_BALLOON_09:Class;
+		
+		private static const WHITE_BALLOON:Vector.<Class>=Vector.<Class>([
+			WHITE_BALLOON_01,WHITE_BALLOON_02,WHITE_BALLOON_03,
+			WHITE_BALLOON_04,WHITE_BALLOON_05,WHITE_BALLOON_06,
+			WHITE_BALLOON_07,WHITE_BALLOON_08,WHITE_BALLOON_09
+		]);
+		
+		[Embed(source = "assets/page/chat/yellow_1.png")]
+		private static const YELLOW_BALLOON_01:Class;
+		[Embed(source = "assets/page/chat/yellow_2.png")]
+		private static const YELLOW_BALLOON_02:Class;
+		[Embed(source = "assets/page/chat/yellow_3.png")]
+		private static const YELLOW_BALLOON_03:Class;
+		[Embed(source = "assets/page/chat/yellow_4.png")]
+		private static const YELLOW_BALLOON_04:Class;
+		[Embed(source = "assets/page/chat/yellow_5.png")]
+		private static const YELLOW_BALLOON_05:Class;
+		[Embed(source = "assets/page/chat/yellow_6.png")]
+		private static const YELLOW_BALLOON_06:Class;
+		[Embed(source = "assets/page/chat/yellow_7.png")]
+		private static const YELLOW_BALLOON_07:Class;
+		[Embed(source = "assets/page/chat/yellow_8.png")]
+		private static const YELLOW_BALLOON_08:Class;
+		[Embed(source = "assets/page/chat/yellow_9.png")]
+		private static const YELLOW_BALLOON_09:Class;
+		
+		private static const YELLOW_BALLOON:Vector.<Class>=Vector.<Class>([
+			YELLOW_BALLOON_01,YELLOW_BALLOON_02,YELLOW_BALLOON_03,
+			YELLOW_BALLOON_04,YELLOW_BALLOON_05,YELLOW_BALLOON_06,
+			YELLOW_BALLOON_07,YELLOW_BALLOON_08,YELLOW_BALLOON_09
+		]);
+		
+		public static const ALIGN_LEFT:String="LEFT";
+		public static const ALIGN_RIGHT:String="RIGHT";
+		
+		
+		private var read_yn:Bitmap;
+		public function get Unread():Boolean{ return read_yn.visible;  }
+		public function set Unread(value:Boolean):void{ read_yn.visible=value; }
+		
+		
+		public var chat_seq:String=null;
+		
+		public function TextBalloon(align:String,writer:String,comment:String,date:String,unread:Boolean,maxWidth:int)
+		{
+			super();
+			
+			var txt:TextField,fmt:TextFormat,bmpTemp:Bitmap;
+			var i:int,xPos:Number,yPos:Number;
+			
+			var name_mark:Bitmap=new NAME_MARK; name_mark.smoothing=true;
+			var time_bg:Bitmap=new TIME_BG; time_bg.smoothing=true;
+			read_yn=new READ_YN; read_yn.smoothing=true;
+			var txtTime:TextField;
+			
+			var photo:Sprite=new Sprite;
+			var title:Sprite=new Sprite;
+			var content:Sprite=new Sprite;
+			var time:Sprite=new Sprite;
+			
+			bmpTemp=new PHOTO_BG;
+			bmpTemp.smoothing=true;
+			photo.addChild(bmpTemp);
+			
+			time.addChild(time_bg);
+			
+			if(align==ALIGN_LEFT){
+				photo.x=20; photo.y=0;
+				
+				//이름
+				txt=new TextField;
+				txt.x=name_mark.width+5; txt.y=0; txt.width=1; txt.height=28;
+				fmt=txt.defaultTextFormat;
+				fmt.color=0x595959;
+				fmt.font="Main";
+				fmt.size=txt.height/1.3;
+				txt.defaultTextFormat=fmt;
+				txt.autoSize=TextFieldAutoSize.LEFT;
+				txt.selectable=false;
+				txt.embedFonts=true;
+				txt.antiAliasType=AntiAliasType.ADVANCED;
+				txt.text=writer;
+				txt.cacheAsBitmap=true;
+				title.addChild(txt);
+				
+				name_mark.x=0;
+				name_mark.y=txt.y+txt.height/2-name_mark.height/2+5;
+				title.addChild(name_mark);
+				
+				title.x=photo.x+photo.width+30;
+				title.y=photo.y;
+				
+				//시간
+				read_yn.x=time_bg.x+time_bg.width-read_yn.width-10;
+				read_yn.y=time_bg.y+time_bg.height/2-read_yn.height/2;
+				read_yn.visible=unread;
+				time.addChild(read_yn);
+				
+				txt=new TextField;
+				txt.width=1; txt.height=18;
+				fmt=txt.defaultTextFormat;
+				fmt.color=0xFFFFFF;
+				fmt.font="Main";
+				fmt.size=txt.height/1.3;
+				txt.defaultTextFormat=fmt;
+				txt.autoSize=TextFieldAutoSize.LEFT;
+				txt.selectable=false;
+				txt.embedFonts=true;
+				txt.antiAliasType=AntiAliasType.ADVANCED;
+				txt.text=date;
+				txt.cacheAsBitmap=true;
+				time.addChild(txt);
+				txt.x=read_yn.x-txt.width-5; txt.y=time_bg.height/2-txt.height/2;
+				txtTime=txt;
+								
+				//내용
+				txt=new TextField;
+				txt.width=1; txt.height=28;
+				fmt=txt.defaultTextFormat;
+				fmt.color=0x474747;
+				fmt.font="Main";
+				fmt.size=txt.height/1.3;
+				txt.defaultTextFormat=fmt;
+				txt.autoSize=TextFieldAutoSize.LEFT;
+				txt.selectable=false;
+				txt.embedFonts=true;
+				txt.antiAliasType=AntiAliasType.ADVANCED;
+				txt.text=comment;
+				txt.cacheAsBitmap=true;
+				
+				if(maxWidth>0 && txt.width>maxWidth-(photo.x+photo.width+3)-(time_bg.width-txtTime.x)-50-40){
+					txt.width=maxWidth-(photo.x+photo.width+3)-(time_bg.width-txtTime.x)-50-40; //50=말풍선 좌우측 여백, 40=체크박스
+					txt.wordWrap=true;
+					txt.multiline=true;
+				}
+				
+				//망풍선
+				xPos=0;
+				yPos=0;
+				for(i=0;i<9;i++){
+					bmpTemp=new WHITE_BALLOON[i];
+					bmpTemp.smoothing=true;
+					if(i==1 || i==7){ bmpTemp.width=txt.width; }
+					else if(i==3 || i==5) bmpTemp.height=txt.height;
+					else if(i==4){
+						bmpTemp.width=txt.width;
+						bmpTemp.height=txt.height;
+						txt.x=xPos;
+						txt.y=yPos;
+					}
+					bmpTemp.x=xPos;
+					bmpTemp.y=yPos;
+					xPos+=bmpTemp.width;
+					if((i+1)%3==0){
+						xPos=0;
+						yPos+=bmpTemp.height;
+					}
+					content.addChild(bmpTemp);
+				}
+				content.addChild(txt);
+								
+				content.x=photo.x+photo.width+3;
+				content.y=title.y+title.height-5;
+				time.x=content.x+content.width-txtTime.x;
+				time.y=content.y+content.height-time.height;
+			}
+			else if(align==ALIGN_RIGHT){
+				photo.x=maxWidth-photo.width-20; photo.y=0;
+				
+				//이름
+				txt=new TextField;
+				txt.x=0; txt.y=0; txt.width=1; txt.height=28;
+				fmt=txt.defaultTextFormat;
+				fmt.color=0x595959;
+				fmt.font="Main";
+				fmt.size=txt.height/1.3;
+				txt.defaultTextFormat=fmt;
+				txt.autoSize=TextFieldAutoSize.LEFT;
+				txt.selectable=false;
+				txt.embedFonts=true;
+				txt.antiAliasType=AntiAliasType.ADVANCED;
+				txt.text=writer;
+				txt.cacheAsBitmap=true;
+				title.addChild(txt);
+				
+				name_mark.x=txt.x+txt.width+5;
+				name_mark.y=txt.y+txt.height/2-name_mark.height/2+5;
+				title.addChild(name_mark);
+				
+				title.x=photo.x-title.width-30;
+				title.y=photo.y;
+				
+				//시간
+				read_yn.x=10;
+				read_yn.y=time_bg.y+time_bg.height/2-read_yn.height/2;
+				read_yn.visible=unread;
+				time.addChild(read_yn);
+				
+				txt=new TextField;
+				txt.width=1; txt.height=18;
+				fmt=txt.defaultTextFormat;
+				fmt.color=0xFFFFFF;
+				fmt.font="Main";
+				fmt.size=txt.height/1.3;
+				txt.defaultTextFormat=fmt;
+				txt.autoSize=TextFieldAutoSize.LEFT;
+				txt.selectable=false;
+				txt.embedFonts=true;
+				txt.antiAliasType=AntiAliasType.ADVANCED;
+				txt.text=date;
+				txt.cacheAsBitmap=true;
+				time.addChild(txt);
+				txt.x=read_yn.x+read_yn.width+5; txt.y=time_bg.height/2-txt.height/2;
+				txtTime=txt;
+				
+				//내용
+				txt=new TextField;
+				txt.width=1; txt.height=32;
+				fmt=txt.defaultTextFormat;
+				fmt.color=0x474747;
+				fmt.font="Main";
+				fmt.size=txt.height/1.3;
+				txt.defaultTextFormat=fmt;
+				txt.autoSize=TextFieldAutoSize.LEFT;
+				txt.selectable=false;
+				txt.embedFonts=true;
+				txt.antiAliasType=AntiAliasType.ADVANCED;
+				txt.text=comment;
+				txt.cacheAsBitmap=true;
+				
+				if(maxWidth>0 && txt.width>maxWidth-(maxWidth-photo.x)-(txtTime.x+txtTime.width)-50-40){
+					txt.width=maxWidth-(maxWidth-photo.x)-(txtTime.x+txtTime.width)-50-40; //50=말풍선 좌우측 여백, 40=체크박스
+					txt.wordWrap=true;
+					txt.multiline=true;
+				}
+				
+				//망풍선
+				xPos=0;
+				yPos=0;
+				for(i=0;i<9;i++){
+					bmpTemp=new YELLOW_BALLOON[i];
+					bmpTemp.smoothing=true;
+					if(i==1 || i==7){ bmpTemp.width=txt.width; }
+					else if(i==3 || i==5) bmpTemp.height=txt.height;
+					else if(i==4){
+						bmpTemp.width=txt.width;
+						bmpTemp.height=txt.height;
+						txt.x=xPos;
+						txt.y=yPos;
+					}
+					bmpTemp.x=xPos;
+					bmpTemp.y=yPos;
+					xPos+=bmpTemp.width;
+					if((i+1)%3==0){
+						xPos=0;
+						yPos+=bmpTemp.height;
+					}
+					content.addChild(bmpTemp);
+				}
+				content.addChild(txt);
+				
+				content.x=photo.x-content.width-3;
+				content.y=title.y+title.height-5;
+				time.x=content.x-(txtTime.x+txtTime.width);
+				time.y=content.y+content.height-time.height;
+			}
+			
+			addChild(photo);
+			addChild(title);
+			addChild(time);
+			addChild(content);
+			
+			cacheAsBitmap=true;
+		}
+	}
+}

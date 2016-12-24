@@ -1,0 +1,352 @@
+package Popup
+{
+	import com.thanksmister.touchlist.controls.TouchList;
+	import com.thanksmister.touchlist.renderers.DisplayObjectItemRenderer;
+	
+	import flash.display.Bitmap;
+	import flash.display.Sprite;
+	import flash.events.Event;
+	import flash.events.MouseEvent;
+	import flash.events.TimerEvent;
+	import flash.text.AntiAliasType;
+	import flash.text.TextField;
+	import flash.text.TextFieldAutoSize;
+	import flash.text.TextFieldType;
+	import flash.text.TextFormat;
+	import flash.utils.Timer;
+	
+	import mx.utils.StringUtil;
+	
+	import flashx.textLayout.formats.TextAlign;
+	
+	import kr.pe.hs.ui.AppTextField;
+	import kr.pe.hs.ui.TabbedButton;
+	import kr.pe.hs.util.HangulUtil;
+	
+	import pl.mllr.extensions.contactEditor.ContactEditor;
+
+	public class PhoneBookPopup extends BasePopup
+	{
+		[Embed(source = "assets/bg.png")]
+		private static const BG:Class;		
+		private var _bg:Bitmap;
+		
+		[Embed(source = "assets/popup/phonebook/title.png")]
+		private static const TITLE:Class;		
+		private var _title:Bitmap;
+		
+		[Embed(source = "assets/popup/phonebook/search.png")]
+		private static const SEARCH:Class;		
+		private var _search:Bitmap;
+		
+		private var _txtSearch:AppTextField;
+		private var _searchHelper:TextField;		
+		private var _searchTimer:Timer;
+		
+		[Embed(source = "assets/popup/phonebook/item.png")]
+		private static const ITEM:Class;
+		
+		[Embed(source = "assets/popup/phonebook/checkbox.png")]
+		private static const CHECKBOX:Class;
+		[Embed(source = "assets/popup/phonebook/checkbox_on.png")]
+		private static const CHECKBOX_ON:Class;
+		
+		[Embed(source = "assets/popup/phonebook/submit.png")]
+		private static const SUBMIT:Class;
+		[Embed(source = "assets/popup/phonebook/submit_on.png")]
+		private static const SUBMIT_ON:Class;
+		
+		[Embed(source = "assets/top_menu/button_prev.png")]
+		private static const CANCEL:Class;
+		[Embed(source = "assets/top_menu/button_prev_on.png")]
+		private static const CANCEL_ON:Class;
+		
+		private var _width:Number;
+		private var _height:Number;
+		private var _touchList:TouchList;
+		
+		private var _buttonSubmit:TabbedButton;
+		private var _buttonCancel:TabbedButton;
+		
+		private var _currentSelectedItem:Sprite;
+		private var _data:Array;
+		
+		private var _lastDownPointY:Number;
+		
+		private var _defaultValue:String;
+		private var _callback:Function;
+		
+		public function PhoneBookPopup(callback:Function,defaultValue:String="")
+		{
+			super();
+			
+			var contact:ContactEditor=new ContactEditor;
+			_data=contact.getContacts();
+			//_data=contact.getContactsSimple();
+			contact.dispose();
+			
+			_width=Elever.Main.FullWidth;
+			_height=Elever.Main.FullHeight;
+			
+			_bg=new BG;
+			_bg.smoothing=true;
+			addChild(_bg);
+			
+			_title=new TITLE;
+			_title.smoothing=true;
+			addChild(_title);
+			
+			_search=new SEARCH;
+			_search.smoothing=true;
+			addChild(_search);
+			
+			_searchHelper=new TextField;
+			_searchHelper.type=TextFieldType.DYNAMIC;
+			var fmt:TextFormat=_searchHelper.defaultTextFormat;
+			fmt.font="Main";
+			fmt.size=20;
+			fmt.color=0xACACAC;
+			_searchHelper.defaultTextFormat=fmt;
+			_searchHelper.selectable=false;
+			_searchHelper.embedFonts=true;
+			_searchHelper.antiAliasType=AntiAliasType.ADVANCED;
+			_searchHelper.autoSize=TextFieldAutoSize.LEFT;
+			_searchHelper.text="검색창";
+			addChild(_searchHelper);
+			
+			_txtSearch=new AppTextField;
+			_txtSearch.width=430;
+			_txtSearch.height=42;
+			_txtSearch.textAlign=TextAlign.LEFT;
+			_txtSearch.fontSize=_txtSearch.height/1.3;
+			_txtSearch.addEventListener(Event.CHANGE,txtSearch_onChange);
+			_txtSearch.text="";
+			addChild(_txtSearch);
+			
+			var bmpSubmit:Bitmap=new SUBMIT;
+			bmpSubmit.smoothing=true;
+			var bmpSubmit_on:Bitmap=new SUBMIT_ON;
+			bmpSubmit_on.smoothing=true;
+			_buttonSubmit=new TabbedButton(bmpSubmit,bmpSubmit_on,bmpSubmit_on);
+			_buttonSubmit.addEventListener(MouseEvent.CLICK,submit_onClick);
+			_buttonSubmit.mouseEnabled=false;
+			_buttonSubmit.alpha=0.3;
+			addChild(_buttonSubmit);
+			
+			var bmpCancel:Bitmap=new CANCEL;
+			bmpCancel.smoothing=true;
+			var bmpCancelOn:Bitmap=new CANCEL_ON;
+			bmpCancelOn.smoothing=true;
+			_buttonCancel=new TabbedButton(bmpCancel,bmpCancelOn,bmpCancelOn);
+			_buttonCancel.addEventListener(MouseEvent.CLICK,cancel_onClick);
+			addChild(_buttonCancel);
+			
+			_touchList=new TouchList(_width,_height);
+			_touchList.addEventListener(Event.ADDED_TO_STAGE,onAdded);
+			addChild(_touchList);
+			
+			_currentSelectedItem=null;
+			
+			_callback=callback;
+			_defaultValue=defaultValue;
+		}
+		
+		private function onAdded(e:Event=null):void{
+			var item:DisplayObjectItemRenderer;
+			var txtName:TextField,txtPhone:TextField;
+			var fmt:TextFormat;
+			var itemSprite:Sprite;
+			var bmpCheckbox:Bitmap;
+			var bmpCheckbox_on:Bitmap;
+			var checkBox:TabbedButton;
+			var userName:String,userChosung:String,userPhone:String,searchText:String;
+			
+			searchText=StringUtil.trim(_txtSearch.text).toUpperCase();
+			
+			_touchList.removeListItems();
+			for(var i:uint=0;i<_data.length;i++){
+				userName=_data[i].compositename;
+				userChosung=HangulUtil.getChosung(userName);
+				if(_data[i].phones.length==0) continue;
+				userPhone=_data[i].phones[0];
+				
+				if(_txtSearch.text.length>0){
+					if(userName.toUpperCase().indexOf(searchText)<0 && userChosung.indexOf(searchText)<0) continue;
+				}
+				
+				item=new DisplayObjectItemRenderer;
+				
+				itemSprite=new Sprite;
+				itemSprite.mouseChildren=false;
+				itemSprite.buttonMode=true;
+				
+				var itemBg:Bitmap=new ITEM;
+				itemBg.smoothing=true;
+				itemSprite.addChild(itemBg);
+				
+				bmpCheckbox=new CHECKBOX;
+				bmpCheckbox.smoothing=true;
+				bmpCheckbox_on=new CHECKBOX_ON;
+				bmpCheckbox_on.smoothing=true;
+				checkBox=new TabbedButton(bmpCheckbox,bmpCheckbox,bmpCheckbox_on);
+				checkBox.name="checkbox";
+				checkBox.x=20;
+				checkBox.y=56/2-checkBox.height/2;
+				itemSprite.addChild(checkBox);
+				
+				txtName=new TextField;
+				txtName.name="name";
+				txtName.type=TextFieldType.DYNAMIC;
+				txtName.multiline=false;
+				txtName.selectable=false;
+				fmt=txtName.defaultTextFormat;
+				fmt.font="Main";
+				fmt.color=0x595959;
+				fmt.size=22;
+				txtName.defaultTextFormat=fmt;
+				txtName.antiAliasType=AntiAliasType.ADVANCED;
+				txtName.embedFonts=true;
+				txtName.autoSize=TextFieldAutoSize.RIGHT;
+				txtName.text=userName;
+				txtName.x=checkBox.x+checkBox.width+20;
+				txtName.y=56/2-txtName.height/2;
+				itemSprite.addChild(txtName);
+				
+				txtPhone=new TextField;
+				txtPhone.name="phone";
+				txtPhone.type=TextFieldType.DYNAMIC;
+				txtPhone.multiline=false;
+				txtPhone.selectable=false;
+				fmt=txtPhone.defaultTextFormat;
+				fmt.font="Main";
+				fmt.color=0x595959;
+				fmt.size=22;
+				txtPhone.defaultTextFormat=fmt;
+				txtPhone.antiAliasType=AntiAliasType.ADVANCED;
+				txtPhone.embedFonts=true;
+				txtPhone.autoSize=TextFieldAutoSize.LEFT;
+				txtPhone.text=userPhone;
+				txtPhone.x=540-txtPhone.width-40;
+				txtPhone.y=56/2-txtPhone.height/2;
+				itemSprite.addChild(txtPhone);
+				
+				if(txtPhone.text.replace(/-/g,"")==_defaultValue){
+					_currentSelectedItem=itemSprite;
+					checkBox.isTabbed=true;
+					
+					_buttonSubmit.mouseEnabled=true;
+					_buttonSubmit.alpha=1;
+				}
+				
+				itemSprite.addEventListener(MouseEvent.CLICK,item_onClick);
+				itemSprite.addEventListener(MouseEvent.MOUSE_DOWN,item_onDown);
+				
+				item.data=itemSprite;
+				item.cacheAsBitmap=true;
+				//itemSprite.cacheAsBitmap=true;
+				
+				_touchList.addListItem(item);
+			}
+		}
+		
+		private function onSearch(e:TimerEvent):void{
+			_searchTimer.stop();
+			_searchTimer=null;
+			onAdded();
+		}
+		
+		private function txtSearch_onChange(e:Event):void{
+			if(_txtSearch.text.length==0){
+				_searchHelper.visible=true;
+				if(_searchTimer){
+					_searchTimer.stop();
+					_searchTimer.start();
+				}
+				else{
+					_searchTimer=new Timer(300,1);
+					_searchTimer.addEventListener(TimerEvent.TIMER,onSearch);
+					_searchTimer.start();
+				}
+			}
+			else{
+				if(_searchTimer){
+					_searchTimer.stop();
+					_searchTimer=null;
+				}
+				_searchHelper.visible=false;
+				onAdded();
+			}
+		}
+		
+		private function submit_onClick(e:MouseEvent):void{
+			if(_currentSelectedItem){
+				_callback((_currentSelectedItem.getChildByName("phone") as TextField).text.replace(/-/g,""));
+			}
+			else{
+				_callback(null);
+			}
+			Elever.Main.closePopup();
+		}
+		
+		private function cancel_onClick(e:MouseEvent):void{
+			_callback(null);
+			Elever.Main.closePopup();
+		}
+		
+		private function item_onDown(e:MouseEvent):void{
+			_lastDownPointY=e.stageY;
+		}
+		 
+		private function item_onClick(e:MouseEvent):void{
+			if(Math.abs(_lastDownPointY-e.stageY)>10){
+				return;
+			}
+			
+			if(_currentSelectedItem){
+				(_currentSelectedItem.getChildByName("checkbox") as TabbedButton).isTabbed=false;
+			}
+			
+			_currentSelectedItem=e.currentTarget as Sprite;
+			(_currentSelectedItem.getChildByName("checkbox") as TabbedButton).isTabbed=true;
+			
+			_buttonSubmit.mouseEnabled=true;
+			_buttonSubmit.alpha=1;
+		}
+		
+		public override function onResize():void
+		{
+			_width=Elever.Main.FullWidth;
+			_height=Elever.Main.FullHeight;
+			
+			_bg.width=_width;
+			_bg.height=_height;
+			
+			_title.x=0;
+			_title.y=0;
+			
+			_search.x=0;
+			_search.y=_title.height;
+			
+			_searchHelper.x=_search.x+75;
+			_searchHelper.y=_search.y+23;
+			
+			_txtSearch.x=_search.x+69;
+			_txtSearch.y=_search.y+14;
+			
+			_buttonSubmit.x=_width/2-_buttonSubmit.width/2;
+			_buttonSubmit.y=_height-_buttonSubmit.height-53;
+			
+			_buttonCancel.x=_title.width*0.03;
+			_buttonCancel.y=_title.height/2-_buttonCancel.height/2;
+			
+			_touchList.x=0;
+			_touchList.y=_search.y+_search.height;
+			_touchList.resize(_width,_height-_touchList.y-127);
+		}
+		
+		public override function dispose():void
+		{
+			
+		}
+	}
+}

@@ -1,0 +1,17 @@
+<coverflow>
+    <image src="coverImg/game1_img.png" title="주의력 검사">
+        <link>http://active.tutsplus.com/articles/roundups/html5-and-flash-17-industry-experts-have-their-say/</link>
+    </image>
+    <image src="coverImg/game2_img.png" title="추 론">
+        <link>http://active.tutsplus.com/tutorials/effects/create-an-impressive-magnifying-effect-with-actionscript-30/</link>
+    </image>
+    <image src="coverImg/game3_img.png" title="단기기억 검사">
+        <link>http://active.tutsplus.com/tutorials/actionscript/as3-101-five-reasons-to-use-setters-and-getters/</link>
+    </image>
+    <image src="coverImg/game4_img.png" title="작업 기억 A">
+        <link>http://active.tutsplus.com/tutorials/actionscript/as3-101-five-reasons-to-use-setters-and-getters/</link>
+    </image>
+    <image src="coverImg/game4_img.png" title="작업 기억 B">
+        <link>http://active.tutsplus.com/tutorials/actionscript/as3-101-five-reasons-to-use-setters-and-getters/</link>
+    </image>
+</coverflow>

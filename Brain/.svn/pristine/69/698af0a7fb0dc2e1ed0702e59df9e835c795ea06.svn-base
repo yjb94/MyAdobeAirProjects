@@ -1,0 +1,147 @@
+package Page.Calendar
+{
+	import flash.display.Bitmap;
+	import flash.display.DisplayObject;
+	import flash.display.Sprite;
+	import flash.events.Event;
+	import flash.events.MouseEvent;
+	
+	import kr.pe.hs.ui.TabbedButton;
+	
+	public class ColorPicker extends Sprite
+	{
+		private static var _Colors:Vector.<uint>=Vector.<uint>([
+			0xfef1ca,0xc7e2fc,0xffecec,0xd5f4d3,0xabe6e3
+		]);
+		private static var _HighlightColors:Vector.<uint>=Vector.<uint>([
+			0xffd87c,0x93c9fd,0xf0a8b5,0x96d293,0x59c6c0
+		]);
+		public static function get Colors():Vector.<uint>{ return _Colors; }
+		public static function getHighlightColor(color:uint):uint{
+			var idx:Number=_Colors.indexOf(color);
+			if(idx>=0) return _HighlightColors[idx];
+			
+			return 0xFFFFFF-color;
+		}
+		
+		
+		[Embed(source = "assets/page/calendar/picker/sticker_area.png")]
+		private static var STICKER_AREA:Class;
+		
+		private var _colorArea:Sprite;
+		
+		
+		[Embed(source = "assets/page/calendar/picker/button_more.png")]
+		private static var BUTTON_MORE:Class;
+		
+		private var _buttonMore:TabbedButton;
+		
+		
+		private var _isOpened:Boolean;
+		private var _selectedColor:Number=NaN;
+		public function get SelectedColor():Number{ return _selectedColor; }
+		public function set SelectedColor(value:Number):void{ _selectedColor=value; }
+		private var _selectedColorSprite:Sprite;
+		
+		public function ColorPicker()
+		{
+			super();
+			
+			_isOpened=false;
+			
+			_colorArea=new Sprite;
+			var bmpArea:Bitmap=new STICKER_AREA; bmpArea.smoothing=true;
+			_colorArea.addChild(bmpArea);
+			_colorArea.y=7;
+			
+			if(_Colors.length>5){
+				var bmpButtonMore:Bitmap=new BUTTON_MORE; bmpButtonMore.smoothing=true;
+				var bmpButtonMore_down:Bitmap=new BUTTON_MORE; bmpButtonMore_down.smoothing=true;
+				var bmpButtonMore_tabbed:Bitmap=new BUTTON_MORE; bmpButtonMore_tabbed.smoothing=true;
+				bmpButtonMore_tabbed.scaleY=-1;
+				bmpButtonMore_tabbed.y=bmpButtonMore_tabbed.height;
+				_buttonMore=new TabbedButton(bmpButtonMore,bmpButtonMore_down,bmpButtonMore_tabbed);
+				_buttonMore.x=(_colorArea.width+13)+406-_buttonMore.width;
+				_buttonMore.y=7;
+				_buttonMore.addEventListener(MouseEvent.CLICK,more_onClick);
+				addChild(_buttonMore);
+			}
+			
+			_selectedColorSprite=new Sprite;
+			_selectedColorSprite.x=_colorArea.width/2-32/2
+			_selectedColorSprite.y=_colorArea.height/2-32/2
+			_colorArea.addChild(_selectedColorSprite);
+			
+			invalidate();
+		}
+		
+		private function invalidate():void{
+			while(numChildren!=0) removeChildAt(0);
+			addChild(_colorArea);
+			if(_buttonMore) addChild(_buttonMore);
+			
+			var len:int=5;
+			if(_isOpened) len=_Colors.length;
+			for(var i:int=0;i<len;i++){
+				var sprite:Sprite=new Sprite;
+				
+				sprite.graphics.clear();
+				sprite.graphics.lineStyle();
+				sprite.graphics.beginFill(0xFFFFFF,0);
+				sprite.graphics.drawRect(0,0,64,64);
+				sprite.graphics.endFill();
+				sprite.graphics.lineStyle(1,0xa6a6a6);
+				sprite.graphics.beginFill(_Colors[i],1);
+				sprite.graphics.drawRect(16,16,32,32);
+				sprite.graphics.endFill();
+				
+				if(_buttonMore){
+					sprite.x=(_colorArea.width+13)+20+70*(i%5);
+				}
+				else{
+					sprite.x=(_colorArea.width+13)+20+75*(i%5);
+				}
+				sprite.y=7+78*Math.floor(i/5);
+				sprite.buttonMode=true;
+				sprite.addEventListener(MouseEvent.CLICK,sticker_onClick,false,0,true);
+				addChild(sprite);
+			}
+			
+			graphics.clear();
+			graphics.beginFill(0xececec);
+			if(_buttonMore && _isOpened){
+				graphics.drawRoundRect((_colorArea.width+13),7,406,78*Math.ceil(len/5),20,20);
+			}
+			else{
+				graphics.drawRoundRect((_colorArea.width+13),7,406,64*Math.ceil(len/5),20,20);
+			}
+			graphics.endFill();
+			
+		}
+		
+		private function more_onClick(e:MouseEvent):void{
+			_isOpened=!_isOpened;
+			_buttonMore.isTabbed=_isOpened;
+			invalidate();
+			dispatchEvent(new Event(Event.RESIZE));
+		}
+		
+		private function sticker_onClick(e:MouseEvent):void{
+			if(_buttonMore){
+				_selectedColor=Colors[getChildIndex(e.currentTarget as DisplayObject)-2];
+			}
+			else{
+				_selectedColor=Colors[getChildIndex(e.currentTarget as DisplayObject)-1];
+			}
+			if(_selectedColor){
+				_selectedColorSprite.graphics.clear();
+				_selectedColorSprite.graphics.lineStyle(1,0xa6a6a6);
+				_selectedColorSprite.graphics.beginFill(_selectedColor,1);
+				_selectedColorSprite.graphics.drawRect(0,0,32,32);
+				_selectedColorSprite.graphics.endFill();
+			}
+			invalidate();
+			dispatchEvent(new Event(Event.CHANGE));
+		}
+	}
+}

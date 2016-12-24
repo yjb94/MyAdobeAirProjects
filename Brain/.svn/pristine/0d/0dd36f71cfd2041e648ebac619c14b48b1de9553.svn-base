@@ -1,0 +1,120 @@
+package Page.Chat
+{
+	import flash.display.Bitmap;
+	import flash.display.Loader;
+	import flash.display.LoaderInfo;
+	import flash.display.Sprite;
+	import flash.events.Event;
+	import flash.events.MouseEvent;
+	import flash.filesystem.File;
+	import flash.net.FileReference;
+	import flash.net.URLRequest;
+	import flash.utils.Dictionary;
+	
+	import kr.pe.hs.ui.TabbedButton;
+	
+	public class EmoticonPicker extends Sprite
+	{
+		[Embed(source = "assets/page/chat/emoticon/bg.png")]
+		private const BG:Class;
+		
+		[Embed(source = "assets/page/chat/emoticon/tab_current.png")]
+		private const TAB_CURRENT:Class;
+		
+		private const EMOTICON_PATH:String="/data/emoticons/";
+		private const EMOTICON_TABS:Vector.<String>=Vector.<String>([
+			"꾸꾸뿌뿌"
+		]);
+		private const EMOTICONS:Vector.<Vector.<String>>=Vector.<Vector.<String>>([
+			Vector.<String>([
+				"",""
+			])
+		]);
+		
+		private static var _currentEmoticons:Vector.<String>=Vector.<String>([ ]);
+		
+		private var _bg:Bitmap;
+		
+		private var _tabs:Vector.<TabbedButton>;
+		private var _emoticonsData:Dictionary;
+		
+		public function EmoticonPicker()
+		{
+			super();
+			
+			var i:int;
+			
+			_bg=new BG; _bg.smoothing=true;
+			addChild(_bg);
+			
+			_emoticonsData=new Dictionary;
+			
+			_tabs=new Vector.<TabbedButton>;
+			var bmpCurrent:Bitmap=new TAB_CURRENT; bmpCurrent.smoothing=true; bmpCurrent.alpha=0.4;
+			var bmpCurrent_on:Bitmap=new TAB_CURRENT; bmpCurrent_on.smoothing=true;
+			_tabs[0]=new TabbedButton(bmpCurrent,bmpCurrent_on,bmpCurrent_on);
+			_tabs[0].addEventListener(MouseEvent.CLICK,onTabbed);
+			_tabs[0].isTabbed=true;
+			
+			var file:File=new File(EMOTICON_PATH);
+			var emoticon_tabs:Array=file.getDirectoryListing();
+			
+			for(i=0;i<emoticon_tabs.length;i++){
+				var loader:Loader=new Loader;
+				loader.load(new URLRequest(emoticon_tabs[i].nativePath));
+				loader.contentLoaderInfo.addEventListener(Event.COMPLETE,onLoadComplete);
+				
+				_tabs[i+1]=new TabbedButton(loader);
+				_tabs[i+1].addEventListener(MouseEvent.CLICK,onTabbed);
+			}
+			onResize();
+		}
+		
+		private function onLoadComplete(e:Event):void{
+			var loaderInfo:LoaderInfo=e.currentTarget as LoaderInfo;
+			var loader:Loader=loaderInfo.loader;
+			var bitmap:Bitmap=loaderInfo.content as Bitmap;
+			bitmap.smoothing=true;
+			
+			for(var i:int=1;i<_tabs.length;i++){
+				if(_tabs[i].Normal==loader){
+					var bmp:Bitmap=new Bitmap(bitmap.bitmapData);
+					bmp.alpha=0.4;
+					
+					_tabs[i].Normal=bmp;
+					_tabs[i].Down=bitmap;
+					_tabs[i].Tabbed=bitmap;
+					break;
+				}
+			}
+			
+			onResize();
+		}
+		
+		private function onResize():void{
+			for(var i:int=0;i<_tabs.length;i++){
+				if(i==0)
+					_tabs[i].x=10;
+				else 
+					_tabs[i].x=_tabs[i-1].x+_tabs[i-1].width+10;
+				_tabs[i].y=_bg.height-58/2-_tabs[i].height/2;
+				
+				_tabs[i].removeEventListener(MouseEvent.CLICK,onTabbed);
+				_tabs[i].addEventListener(MouseEvent.CLICK,onTabbed);
+				
+				addChild(_tabs[i]);
+			}
+		}
+		
+		private function onTabbed(e:MouseEvent):void{
+			for(var i:int=0;i<_tabs.length;i++){
+				if(_tabs[i]==e.currentTarget){
+					_tabs[i].isTabbed=true;
+				}
+				else 
+					_tabs[i].isTabbed=false;
+			}
+			
+		}
+	}
+}

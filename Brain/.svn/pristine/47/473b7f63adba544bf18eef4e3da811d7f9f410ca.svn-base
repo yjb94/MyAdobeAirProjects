@@ -1,0 +1,79 @@
+package kr.pe.hs.ui
+{
+	import flash.display.DisplayObject;
+	import flash.display.Sprite;
+	import flash.events.MouseEvent;
+	
+	public class TabbedButton extends Sprite
+	{		
+		private var _isTabbed:Boolean;
+		
+		private var _normalButton:DisplayObject;
+		public function get Normal():DisplayObject{ return _normalButton; }
+		private var _downButton:DisplayObject;
+		public function get Down():DisplayObject{ return _downButton; }
+		private var _tabbedButton:DisplayObject;
+		public function get Tabbed():DisplayObject{ return _tabbedButton; }
+		 
+		public function TabbedButton(normal:DisplayObject,down:DisplayObject,tabbed:DisplayObject)
+		{
+			super();
+			
+			_normalButton=normal;
+			if(down==null) _downButton=normal;
+			else _downButton=down;
+			_tabbedButton=tabbed;	
+			_isTabbed=false;
+			addChild(_normalButton);
+			
+			buttonMode=true;
+			
+			/*addEventListener(MouseEvent.ROLL_OVER,onRollOver);
+			addEventListener(MouseEvent.ROLL_OUT,onRollOut);*/
+			addEventListener(MouseEvent.MOUSE_DOWN,onDown);
+		}
+		
+		private function onDown(e:MouseEvent):void{
+			if(!_isTabbed){
+				removeChild(_normalButton);
+				addChild(_downButton);
+				
+				stage.addEventListener(MouseEvent.MOUSE_UP,onUp);
+			}
+		}
+		private function onUp(e:MouseEvent):void{
+			if(!_isTabbed){
+				removeChild(_downButton);
+				addChild(_normalButton);
+			}
+			stage.removeEventListener(MouseEvent.MOUSE_UP,onUp);
+		}
+		/*private function onRollOver(e:MouseEvent):void{
+			if(!_isTabbed){
+				removeChild(_normalButton);
+				addChild(_downButton);
+			}
+		}
+		private function onRollOut(e:MouseEvent):void{
+			if(!_isTabbed){
+				removeChild(_downButton);
+				addChild(_normalButton);
+			}
+		}*/
+		
+		public function get isTabbed():Boolean{ return _isTabbed; }
+		public function set isTabbed(value:Boolean):void{
+			_isTabbed=value;
+			if(_isTabbed){
+				if(_normalButton.parent) removeChild(_normalButton);
+				if(_downButton.parent) removeChild(_downButton);
+				addChild(_tabbedButton);
+			}
+			else{
+				if(_tabbedButton.parent) removeChild(_tabbedButton);
+				if(_downButton.parent) removeChild(_downButton);				
+				addChild(_normalButton);
+			}
+		}
+	}
+}

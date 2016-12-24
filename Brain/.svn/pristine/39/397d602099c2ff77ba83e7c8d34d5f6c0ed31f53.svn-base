@@ -1,0 +1,541 @@
+package Page.Album
+{
+	import com.thanksmister.touchlist.controls.TouchList;
+	import com.thanksmister.touchlist.renderers.DisplayObjectItemRenderer;
+	
+	import flash.display.Bitmap;
+	import flash.display.BitmapData;
+	import flash.display.JPEGEncoderOptions;
+	import flash.display.Loader;
+	import flash.display.LoaderInfo;
+	import flash.display.Sprite;
+	import flash.events.Event;
+	import flash.events.IEventDispatcher;
+	import flash.events.MediaEvent;
+	import flash.events.MouseEvent;
+	import flash.events.TimerEvent;
+	import flash.filesystem.File;
+	import flash.filesystem.FileMode;
+	import flash.filesystem.FileStream;
+	import flash.geom.Matrix;
+	import flash.media.CameraRoll;
+	import flash.media.CameraUI;
+	import flash.media.MediaPromise;
+	import flash.media.MediaType;
+	import flash.net.URLRequest;
+	import flash.net.URLVariables;
+	import flash.system.LoaderContext;
+	import flash.text.AntiAliasType;
+	import flash.text.TextField;
+	import flash.text.TextFieldAutoSize;
+	import flash.text.TextFormat;
+	import flash.utils.ByteArray;
+	import flash.utils.CompressionAlgorithm;
+	import flash.utils.IDataInput;
+	import flash.utils.Timer;
+	import flash.utils.setTimeout;
+	
+	import mx.graphics.codec.JPEGEncoder;
+	
+	import Page.BasePage;
+	
+	import co.uk.mikestead.net.URLFileVariable;
+	
+	import kr.pe.hs.ui.TabbedButton;
+	
+	import nt.imagine.exif.ExifExtractor;
+	import nt.imagine.exif.prototype.IFDEntry;
+	
+	public class Index extends BasePage
+	{
+		[Embed(source = "assets/page/album/index/button_addalbum.png")]
+		private const BUTTON_ADDALBUM:Class;
+		[Embed(source = "assets/page/album/index/button_addalbum_on.png")]
+		private const BUTTON_ADDALBUM_ON:Class;
+		
+		[Embed(source = "assets/page/album/index/button_addphoto.png")]
+		private const BUTTON_ADDPHOTO:Class;
+		[Embed(source = "assets/page/album/index/button_addphoto_on.png")]
+		private const BUTTON_ADDPHOTO_ON:Class;
+		
+		[Embed(source = "assets/page/album/index/album_bg.png")]
+		private const ALBUM_BG:Class;
+		
+		[Embed(source = "assets/page/album/index/list.png")]
+		private const LIST:Class;
+		
+		private var _buttonAddPhoto:TabbedButton;
+		private var _buttonAddAlbum:TabbedButton;
+		
+		private var _listSprite:Vector.<Sprite>;
+		private var _touchList:TouchList;
+		
+		private var _currentPage:int=0;
+		private var _currentList:Array;
+		
+		private var _autoScrollHList:Vector.<TextField>;
+		private var _autoScrollHTimer:Timer;
+		
+		private static var _albumList:Object;
+		public static function loadEnviroment():void{
+			//return;
+			var appStorage:File=File.applicationStorageDirectory;
+			var dbFile:File = appStorage.resolvePath("calendar.db");
+			if(dbFile.exists){
+				var fs:FileStream=new FileStream;
+				fs.open(dbFile,FileMode.READ);
+				var result:Object=JSON.parse(fs.readUTF());
+				fs.close();
+				
+				_albumList=result;
+			}
+			if(_albumList==null) _albumList=new Object;
+		}
+		
+		public static function saveEnviroment():void{
+			if(_albumList==null) return;
+			
+			var appStorage:File=File.applicationStorageDirectory;
+			var dbFile:File = appStorage.resolvePath("calendar.db");
+			var fs:FileStream=new FileStream;
+			fs.open(dbFile,FileMode.WRITE);
+			fs.writeUTF(JSON.stringify(_albumList));
+			fs.close();
+		}
+		
+		
+		public function Index()
+		{
+			super();
+			
+			Elever.Main.TopMenu.clearAddedChild();
+			Elever.Main.TopMenuVisible=true;
+			Elever.Main.BottomMenuVisible=true;
+			Elever.Main.BottomMenu.setCursor(BottomMenuSprite.CURSOR_ALBUM);
+			
+			
+			
+			var rightMenu:Sprite=new Sprite;
+			
+			var bmpAddPhoto:Bitmap=new BUTTON_ADDPHOTO; bmpAddPhoto.smoothing=true;
+			var bmpAddPhoto_on:Bitmap=new BUTTON_ADDPHOTO_ON; bmpAddPhoto_on.smoothing=true;
+			_buttonAddPhoto=new TabbedButton(bmpAddPhoto,bmpAddPhoto_on,bmpAddPhoto_on);
+			_buttonAddPhoto.addEventListener(MouseEvent.CLICK,addPhoto_onClick);
+			
+			var bmpAddAlbum:Bitmap=new BUTTON_ADDALBUM; bmpAddAlbum.smoothing=true;
+			var bmpAddAlbum_on:Bitmap=new BUTTON_ADDALBUM_ON; bmpAddAlbum_on.smoothing=true;
+			_buttonAddAlbum=new TabbedButton(bmpAddAlbum,bmpAddAlbum_on,bmpAddAlbum_on);
+			_buttonAddAlbum.x=_buttonAddPhoto.x+_buttonAddPhoto.width+5;
+			_buttonAddAlbum.addEventListener(MouseEvent.CLICK,addAlbum_onClick);
+			
+			rightMenu.addChild(_buttonAddPhoto);
+			rightMenu.addChild(_buttonAddAlbum);
+			Elever.Main.TopMenu.RightButton=rightMenu;
+			
+			
+			
+			_autoScrollHList=new Vector.<TextField>;
+			_autoScrollHTimer=new Timer(66);
+			_autoScrollHTimer.addEventListener(TimerEvent.TIMER,autoScroll_onTimer);
+			_autoScrollHTimer.start();
+			
+			
+			
+			_listSprite=new Vector.<Sprite>;			
+			
+			_touchList=new TouchList(Elever.Main.PageWidth,Elever.Main.PageHeight);
+			_touchList.addEventListener(Event.ADDED_TO_STAGE,touchList_onAdded);
+			addChild(_touchList);
+			
+			if(_albumList==null) throw new Error("앨범 환경설정 파일이 로드되지 않았습니다.");
+			drawAlbum();			
+			
+			loadAlbum();
+		}
+		
+		private function touchList_onAdded(e:Event=null):void{
+			_touchList.removeListItems();
+			onResize();
+			for(var i:int = 0; i < _listSprite.length; i++) {
+				_listSprite[i].x=_touchList.width/2-_listSprite[i].width/2
+				_touchList.addListItem(new DisplayObjectItemRenderer(_listSprite[i]));
+			}
+		}
+		
+		public override function onResize():void{
+			_touchList.resize(Elever.Main.PageWidth,Elever.Main.PageHeight);
+		}
+		
+		public override function dispose():void{
+			_buttonAddPhoto.removeEventListener(MouseEvent.CLICK,addPhoto_onClick);
+			_buttonAddPhoto=null;
+			_buttonAddAlbum.removeEventListener(MouseEvent.CLICK,addAlbum_onClick);
+			_buttonAddAlbum=null;
+			
+			
+			_autoScrollHTimer.stop();
+			_autoScrollHTimer.removeEventListener(TimerEvent.TIMER,autoScroll_onTimer);
+			_autoScrollHTimer=null;
+			_autoScrollHList.splice(0,_autoScrollHList.length);
+			_autoScrollHList=null;
+			
+			
+			
+			_touchList.removeListItems();
+			_touchList.removeEventListener(Event.ADDED_TO_STAGE,touchList_onAdded);
+			removeChild(_touchList);
+			_touchList=null;
+			
+			for(var i:int=0;i<_listSprite.length;i++){
+				while(_listSprite[i].numChildren>0) _listSprite[i].removeChildAt(0);
+				if(_listSprite[i].parent) _listSprite[i].parent.removeChild(_listSprite[i]);
+				_listSprite[i]=null;
+			}
+			_listSprite.splice(0,_listSprite.length);
+			_listSprite=null;
+		}
+		
+		private function loadAlbum(page:int=0):void{
+			//Elever.Main.LoadingVisible=true;
+			var params:URLVariables=new URLVariables;
+			
+			params.room_seq=Elever.UserInfo.room_seq;
+			params.page_no=page;
+			_currentPage=page;
+			
+			Elever.Connection.post("eleverAlbumListAction.tiein",params,onLoadComplete);
+		}
+		
+		private function onLoadComplete(data:String):void{
+			//Elever.Main.LoadingVisible=false;
+			if(_touchList==null) return;
+			
+			if(data){
+				var result:Object=JSON.parse(data);
+				
+				if(result.j_errorMsg.length>0){
+					new Alert(result.j_errorMsg).show();
+					return;
+				}
+				
+				var urlParams:URLVariables=Elever.Connection.CurrentParameters;
+				
+				if(result.j_page_no==0){
+					_currentList=new Array;
+				}
+				
+				var i:int;
+				var list:Array=result.j_list;
+				for(i=0;i<list.length;i++){ 
+					_currentList[_currentList.length]=list[i];
+				}
+				
+				if(list.length==5){
+					loadAlbum(_currentPage+1);
+				}
+				else{
+					if(_albumList.list!=null){
+						for(i=0;i<_currentList.length && i<_albumList.list.length;i++){
+							if(_currentList[i].pic_seq==_albumList.list[i].pic_seq){
+								var bytes:ByteArray=_albumList.list[i].pic_thumbnail_bytes as ByteArray;
+								_albumList.list[i]=_currentList[i];
+								_albumList.list[i].pic_thumbnail_bytes=bytes;
+							}
+							else{
+								_albumList.list[i]=_currentList[i];
+							}
+						}
+					}
+					else{
+						_albumList.list=_currentList;
+					}
+					drawAlbum();
+				}
+			}
+		}
+		
+		private function drawAlbum():void{
+			if(_touchList==null) return;
+			
+			_autoScrollHTimer.stop();
+			
+			var i:int;
+			_touchList.removeListItems();
+			for(i=0;i<_listSprite.length;i++){
+				while(_listSprite[i].numChildren>0) _listSprite[i].removeChildAt(0);
+				if(_listSprite[i].parent) _listSprite[i].parent.removeChild(_listSprite[i]);
+				_listSprite[i]=null;
+			}
+			_listSprite.splice(0,_listSprite.length);
+			
+			const dayOfWeekString:Vector.<String>=Vector.<String>(["일","월","화","수","목","금","토"]);
+			
+			if(_albumList.list==null) return;
+			
+			var loaderContext:LoaderContext=new LoaderContext;
+			loaderContext.allowLoadBytesCodeExecution=false;
+			loaderContext.allowCodeImport=true;
+			
+			var list:Array=_albumList.list;
+			for(i=0;i<list.length;i++){
+				var sprite:Sprite=new Sprite;
+				
+				var bg:Bitmap=new ALBUM_BG; bg.smoothing=true;
+				sprite.addChild(bg);
+				
+				if(list[i].pic_thumbnail_bytes is ByteArray && Elever.Main.PageHeight>i*bg.height){
+					var thumbnailCache:Loader=new Loader;
+					thumbnailCache.name="thumbnailCache";
+					thumbnailCache.loadBytes(list[i].pic_thumbnail_bytes as ByteArray,loaderContext);
+					thumbnailCache.contentLoaderInfo.addEventListener(Event.COMPLETE,thumbnail_onLoadComplete);
+					thumbnailCache.x=25; thumbnailCache.y=20;
+					sprite.addChild(thumbnailCache);
+				}
+				var thumbnailLoader:Loader=new Loader;
+				thumbnailLoader.load(new URLRequest(Elever.Connection.BasePath+list[i].pic_thumbnail));
+				thumbnailLoader.contentLoaderInfo.addEventListener(Event.COMPLETE,thumbnail_onLoadComplete);
+				thumbnailLoader.x=25; thumbnailLoader.y=20;
+				sprite.addChild(thumbnailLoader);
+				
+				var li:Bitmap=new LIST; li.smoothing=true;
+				li.x=207; li.y=27;
+				sprite.addChild(li);
+				
+				var ymd:String=list[i].album_date;
+				var currentDate:Date=new Date(parseInt(ymd.substr(0,4)),parseInt(ymd.substr(4,2))-1,parseInt(ymd.substr(6,2)));
+				var dateString:String=currentDate.fullYear.toString()+"년 "+(currentDate.month+1).toString()+"월 "+currentDate.date.toString()+"일 "+dayOfWeekString[currentDate.day];
+								
+				//날짜
+				var txt:TextField=new TextField;
+				txt.x=220; txt.y=28; txt.width=0; txt.height=28;
+				var fmt:TextFormat=txt.defaultTextFormat;
+				fmt.color=0x595959;
+				fmt.font="Main";
+				fmt.size=txt.height/1.3;
+				txt.defaultTextFormat=fmt;
+				txt.autoSize=TextFieldAutoSize.LEFT;
+				txt.selectable=false;
+				txt.embedFonts=true;
+				txt.antiAliasType=AntiAliasType.ADVANCED;
+				txt.text=dateString;
+				txt.cacheAsBitmap=true;
+				sprite.addChild(txt);
+				
+				//갯수
+				txt=new TextField;
+				txt.x=220; txt.y=58; txt.width=0; txt.height=24;
+				fmt=txt.defaultTextFormat;
+				fmt.color=0xb2b0a4;
+				fmt.font="Main";
+				fmt.size=txt.height/1.3;
+				txt.defaultTextFormat=fmt;
+				txt.autoSize=TextFieldAutoSize.LEFT;
+				txt.selectable=false;
+				txt.embedFonts=true;
+				txt.antiAliasType=AntiAliasType.ADVANCED;
+				txt.text=list[i].pic_cnt+" Photos";
+				txt.cacheAsBitmap=true;
+				sprite.addChild(txt);
+				
+				//제목
+				txt=new TextField;
+				txt.x=207; txt.y=91; txt.width=298; txt.height=28;
+				fmt=txt.defaultTextFormat;
+				fmt.color=0x595959;
+				fmt.font="Main";
+				fmt.size=txt.height/1.3;
+				fmt.leftMargin=10;
+				fmt.rightMargin=10;
+				txt.defaultTextFormat=fmt;
+				txt.selectable=false;
+				txt.embedFonts=true;
+				txt.antiAliasType=AntiAliasType.ADVANCED;
+				txt.text=list[i].album_title;
+				if(txt.textWidth>txt.width){
+					_autoScrollHList[_autoScrollHList.length]=txt;
+				}
+				sprite.addChild(txt);
+				
+				_listSprite[_listSprite.length]=sprite;
+			}
+			
+			setTimeout(function():void{
+				if(_autoScrollHTimer==null) return;
+				
+				_autoScrollHTimer.start();
+			},2000);
+			
+			if(_touchList.parent) touchList_onAdded();
+		}
+		
+		private function thumbnail_onLoadComplete(e:Event):void{
+			var loader:Loader=(e.currentTarget as LoaderInfo).loader;
+			var bmp:Bitmap=(e.currentTarget as LoaderInfo).content as Bitmap;
+			
+			loader.contentLoaderInfo.removeEventListener(Event.COMPLETE,thumbnail_onLoadComplete);
+			
+			if(bmp!=null) bmp.smoothing=true;
+			loader.width=153;
+			loader.height=116;
+			
+			if(loader.parent==null) return;
+			_albumList.list[_listSprite.indexOf(loader.parent)].pic_thumbnail_bytes=loader.contentLoaderInfo.bytes;
+			
+			if(loader.name!="thumbnailCache"){
+				var cache:Loader=loader.parent.getChildByName("thumbnailCache") as Loader;
+				if(cache!=null){
+					loader.parent.removeChild(cache);
+					cache=null;
+				}
+			}
+			else{
+				Elever.Main.invalidateAnimateBitmap();
+			}
+		}
+		
+		private function autoScroll_onTimer(e:TimerEvent):void{
+			for(var i:int=0;i<_autoScrollHList.length;i++){
+				_autoScrollHList[i].scrollH+=2;
+				if(_autoScrollHList[i].scrollH>=_autoScrollHList[i].maxScrollH){
+					setTimeout(function(obj:TextField):void{
+						if(_autoScrollHList==null) return;
+						
+						obj.scrollH=0;
+						
+						setTimeout(function(obj:TextField):void{
+							if(_autoScrollHList==null) return;
+							
+							_autoScrollHList[_autoScrollHList.length]=obj;
+						},2000,obj);
+							
+					},2000,_autoScrollHList[i]);
+					_autoScrollHList.splice(i,1);
+					i--;
+				}
+			}
+		}
+		
+		private function addPhoto_onClick(e:MouseEvent):void{
+			var cameraUI:CameraUI = new CameraUI();
+			if( CameraUI.isSupported )
+			{
+				cameraUI.addEventListener( MediaEvent.COMPLETE, imageSelected );
+				//cameraUI.addEventListener( Event.CANCEL, browseCanceled );
+				//cameraUI.addEventListener( ErrorEvent.ERROR, mediaError );
+				cameraUI.launch( MediaType.IMAGE );
+			}
+			else
+			{
+				trace( "CameraUI is not supported.");
+			}
+		}
+		
+		private function addAlbum_onClick(e:MouseEvent):void{
+			var cameraRoll:CameraRoll = new CameraRoll();
+			
+			if( CameraRoll.supportsBrowseForImage )
+			{
+				cameraRoll.addEventListener( MediaEvent.SELECT, imageSelected );
+				//cameraRoll.addEventListener( Event.CANCEL, browseCanceled );
+				//cameraRoll.addEventListener( ErrorEvent.ERROR, mediaError );
+				cameraRoll.browseForImage();
+			}
+			else
+			{
+				trace( "Image browsing is not supported on this device.");
+			}
+		}
+		
+		private var dataSource:IDataInput;
+		private var exifMgr:ExifExtractor;
+		private function imageSelected( event:MediaEvent ):void
+		{ 
+			Elever.Main.LoadingVisible=true;
+			
+			var imagePromise:MediaPromise = event.data;
+			dataSource = imagePromise.open();
+			
+			if( imagePromise.isAsync )
+			{
+				var eventSource:IEventDispatcher = dataSource as IEventDispatcher;            
+				eventSource.addEventListener( Event.COMPLETE, imageLoaded );         
+			}
+			else
+			{
+				imageLoaded();
+			}
+		}
+		
+		private function imageLoaded(event:Event=null):void{
+			var imageBytes:ByteArray = new ByteArray();
+			dataSource.readBytes( imageBytes );
+			
+			var loader:Loader=new Loader;
+			loader.loadBytes(imageBytes);
+			loader.contentLoaderInfo.addEventListener(Event.COMPLETE,function(e:Event):void{
+				var bitmap:Bitmap=loader.content as Bitmap;
+				var bitmapData:BitmapData=bitmap.bitmapData;
+				
+				var scaleX:Number=1280/bitmapData.width;
+				var scaleY:Number=1280/bitmapData.height;
+				if(scaleX<scaleY) scaleY=scaleX;
+				else scaleX=scaleY;
+				
+				//제대로 안나옴...... 으헉...
+				var orientationEntry:IFDEntry=exifMgr.getTagByTag(40962);//orientation
+				var latitudeEntry:IFDEntry=exifMgr.getTagByTag(2);//GPSLatitude
+				var logitudeEntry:IFDEntry=exifMgr.getTagByTag(4);//GPSLongitude
+				
+				var resizeBitmapData:BitmapData=new BitmapData(bitmapData.width*scaleX,bitmapData.height*scaleY,false,0xFFFFFF);
+				var matrix:Matrix=new Matrix;
+				matrix.scale(scaleX,scaleY);
+				resizeBitmapData.draw(bitmapData,matrix,null,null,null,true);
+				
+				var jpgOption:JPEGEncoderOptions=new JPEGEncoderOptions();
+				var resizeBytes:ByteArray=new ByteArray;
+				resizeBitmapData.encode(resizeBitmapData.rect,jpgOption,resizeBytes);
+				
+				
+				var filename:String=Math.floor(Math.random()*100000).toString()+".jpg";
+				
+				var params:URLVariables=new URLVariables;
+				
+				params.user_seq=Elever.UserInfo.user_seq;
+				params.room_seq=Elever.UserInfo.room_seq;
+				params.file_1=new URLFileVariable(resizeBytes,filename);
+				
+				Elever.Connection.post("eleverPicRegAction.tiein",params,onUploadComplete);
+			});
+			
+			/*
+			var filename:String=Math.floor(Math.random()*100000).toString()+".jpg";
+			
+			var params:URLVariables=new URLVariables;
+			
+			params.user_seq=Elever.UserInfo.user_seq;
+			params.room_seq=Elever.UserInfo.room_seq;
+			params.file_1=new URLFileVariable(imageBytes,filename);
+			
+			Elever.Connection.post("eleverPicRegAction.tiein",params,onUploadComplete);
+			*/
+		}	
+		
+		private function onUploadComplete(data:String):void{
+			Elever.Main.LoadingVisible=false;
+			
+			if(data){
+				var result:Object=JSON.parse(data);
+				
+				if(result.j_errorMsg.length>0){
+					new Alert(result.j_errorMsg).show();
+					return;
+				}
+				
+				loadAlbum();
+				return;
+			}
+			
+			new Alert("사진 업로드 실패").show();
+		}
+	}
+}

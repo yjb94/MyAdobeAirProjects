@@ -1,0 +1,15 @@
+﻿package nt.imagine.exif.prototype {
+	public class IFDEntry {
+		public var tag:uint = 0;
+		public var type:uint = 0;
+		public var values:Object = null;
+		public var EN:String =""
+		public var CN:String = ""
+		
+		public function IFDEntry( tag:uint, type:uint, values:Object ) {
+			this.tag = tag;
+			this.type = type;
+			this.values = values;
+		}
+	}
+}

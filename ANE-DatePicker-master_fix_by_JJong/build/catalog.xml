@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding ="utf-8"?>
+<swc xmlns="http://www.adobe.com/flash/swccatalog/9">
+  <versions>
+    <swc version="1.2" />
+    <flex version="4.6.0" build="23201" minimumSupportedVersion="3.0.0" />
+  </versions>
+  <features>
+    <feature-script-deps />
+    <feature-files />
+  </features>
+  <libraries>
+    <library path="library.swf">
+      <script name="com/freshplanet/ane/AirDatePicker/AirDatePicker" mod="1414048123000" signatureChecksum="434296260" >
+        <def id="com.freshplanet.ane.AirDatePicker:AirDatePicker" /> 
+        <dep id="trace" type="e" /> 
+        <dep id="flash.system:Capabilities" type="e" /> 
+        <dep id="flash.events:StatusEvent" type="e" /> 
+        <dep id="flash.external:ExtensionContext" type="e" /> 
+        <dep id="Error" type="e" /> 
+        <dep id="Date" type="s" /> 
+        <dep id="flash.geom:Rectangle" type="s" /> 
+        <dep id="flash.events:StatusEvent" type="s" /> 
+        <dep id="flash.external:ExtensionContext" type="s" /> 
+        <dep id="AS3" type="n" /> 
+        <dep id="flash.events:EventDispatcher" type="i" /> 
+      </script>
+      <script name="_df6b5e2df31758eef0798f489a73d949b43f12b6295e6d0c048d7c628ae9dd01_flash_display_Sprite" mod="1414048123411" signatureChecksum="3475929815" >
+        <def id="_df6b5e2df31758eef0798f489a73d949b43f12b6295e6d0c048d7c628ae9dd01_flash_display_Sprite" /> 
+        <dep id="flash.system:Security" type="e" /> 
+        <dep id="AS3" type="n" /> 
+        <dep id="flash.display:Sprite" type="i" /> 
+      </script>
+      <digests>
+        <digest type="SHA-256" signed="false" value="8c6d1b3c95589a41429f822e94200cedfd6fef5fbf708c813865a79f731247f3"   />
+      </digests>
+    </library>
+  </libraries>
+  <files>
+  </files>
+</swc>

@@ -1,0 +1,190 @@
+package kr.pe.hs.ui
+{
+	import flash.display.Bitmap;
+	import flash.display.BitmapData;
+	import flash.display.Sprite;
+	import flash.display.Stage;
+	import flash.events.Event;
+	import flash.events.FocusEvent;
+	import flash.events.MouseEvent;
+	import flash.events.SoftKeyboardEvent;
+	import flash.geom.Point;
+	import flash.geom.Rectangle;
+	import flash.text.StageText;
+	import flash.text.StageTextInitOptions;
+	
+	public class AppTextField extends Sprite
+	{
+		private var _stageText:StageText;
+		public function get stageText():StageText{ return _stageText; }
+		
+		private var _softKeyboardEnabled:Boolean;
+		public function get softKeyboardEnabled():Boolean{ return _softKeyboardEnabled; }
+		public function set softKeyboardEnabled(value:Boolean):void{ _softKeyboardEnabled=value; }
+		
+		public function get softKeyboardType():String{ return _stageText.softKeyboardType; }
+		public function set softKeyboardType(value:String):void{ _stageText.softKeyboardType=value; }
+		
+		public function get displayAsPassword():Boolean{ return _stageText.displayAsPassword; }
+		public function set displayAsPassword(value:Boolean):void{ _stageText.displayAsPassword=value; }
+		
+		public function get fontFamily():String{ return _stageText.fontFamily; }
+		public function set fontFamily(value:String):void{ _stageText.fontFamily=value; invalidateArea(); }
+		
+		public function get color():uint{ return _stageText.color; }
+		public function set color(value:uint):void{ _stageText.color=value; invalidateArea(); }
+		
+		public function get textAlign():String{ return _stageText.textAlign; }
+		public function set textAlign(value:String):void{ _stageText.textAlign=value; invalidateArea(); }
+		
+		private var _returnKeyLabel:String;
+		public function get returnKeyLabel():String{ return _returnKeyLabel; }
+		public function set returnKeyLabel(value:String):void{ _stageText.returnKeyLabel=value; }
+		
+		public function get text():String{ return _stageText.text; }
+		public function set text(value:String):void{ _stageText.text=value; invalidateArea(); }
+		
+		private var _fontSize:Number;
+		public function get fontSize():Number{ return _fontSize; }
+		public function set fontSize(value:Number):void{ _fontSize=value;  invalidateArea(); }
+		
+		private var _width:Number;
+		public override function get width():Number{ return _width; }
+		public override function set width(value:Number):void{ _width=value; invalidateArea(); }
+		
+		private var _height:Number;
+		public override function get height():Number{ return _height; }
+		public override function set height(value:Number):void{ _height=value; invalidateArea(); }
+		
+		private var _bitmapData:BitmapData;
+		private var _bitmap:Bitmap;
+		
+		public function AppTextField()
+		{
+			super();
+			addEventListener(MouseEvent.CLICK,onClick);
+			addEventListener(Event.ADDED_TO_STAGE,onAdded);
+			
+			cacheAsBitmap=true;
+			softKeyboardEnabled=true;
+			_width=0;
+			_height=0;
+			
+			var option:StageTextInitOptions=new StageTextInitOptions(false);
+			_stageText=new StageText(option);
+			_stageText.visible=false;
+			_stageText.fontFamily="Arial";
+			_stageText.addEventListener(FocusEvent.FOCUS_OUT,onFocusOut);
+			_stageText.addEventListener(SoftKeyboardEvent.SOFT_KEYBOARD_DEACTIVATE,onSoftkeyboardDeactivate);
+		}
+		
+		private function onAdded(e:Event):void{
+			invalidateArea();
+		}
+		
+		private function invalidateArea():void{
+			if(!stage) return;
+			
+			var startPoint:Point=localToGlobal(new Point(0,0));
+			var endPoint:Point=localToGlobal(new Point(_width,_height));
+			_stageText.viewPort=new Rectangle(Math.round(startPoint.x),Math.round(startPoint.y),Math.ceil(endPoint.x-startPoint.x),Math.ceil(endPoint.y-startPoint.y));			
+			_stageText.fontSize=_stageText.viewPort.height/(_height/fontSize);
+			
+			if(_bitmap){
+				if(_width==_bitmap.width && _height==_bitmap.height){
+					_bitmapData.fillRect(new Rectangle(0,0,_bitmapData.width,_bitmapData.height),0x00000000);
+					_stageText.drawViewPortToBitmapData(_bitmapData);
+					return;
+				}
+			}
+			
+			if(_bitmap){
+				removeChild(_bitmap);
+				_bitmap=null;
+			}
+			if(_bitmapData){
+				_bitmapData.dispose();
+				_bitmapData=null;
+			}
+			
+			if(_width>0 && _height>0){
+				_bitmapData=new BitmapData(_stageText.viewPort.width,_stageText.viewPort.height,true,0x00000000);
+				
+				var stageTextStage:Stage=_stageText.stage;
+				_stageText.stage=stage;
+				_stageText.drawViewPortToBitmapData(_bitmapData);
+				_stageText.stage=stageTextStage;
+				
+				_bitmap=new Bitmap(_bitmapData);
+				_bitmap.smoothing=true;
+				_bitmap.width=_width;
+				_bitmap.height=_height;
+				addChild(_bitmap);
+			}
+		}
+		
+		public function focus():void{
+			if(stage && softKeyboardEnabled){
+				_stageText.stage=stage;
+				
+				invalidateArea();
+				
+				if(!_stageText.visible){
+					visible=false;
+					stage.focus=null;
+					
+					_stageText.visible=true;
+					_stageText.assignFocus();
+					_stageText.selectRange(_stageText.text.length,_stageText.text.length);
+				}
+			}
+		}
+		
+		public function defocus():void{
+			_bitmapData.fillRect(new Rectangle(0,0,_bitmapData.width,_bitmapData.height),0x00000000);
+			_stageText.drawViewPortToBitmapData(_bitmapData);
+			
+			_stageText.visible=false;
+			_stageText.stage=null;
+			visible=true;
+		}
+		
+		private function onClick(e:MouseEvent):void{
+			focus();
+		}
+		
+		private function onFocusOut(e:FocusEvent):void{
+			defocus();
+		}
+		
+		private function onSoftkeyboardDeactivate(e:SoftKeyboardEvent):void{
+			defocus();
+		}
+		
+		public override function addEventListener(type:String, listener:Function, useCapture:Boolean=false, priority:int=0, useWeakReference:Boolean=false):void{
+			if(type==SoftKeyboardEvent.SOFT_KEYBOARD_ACTIVATE || 
+				type==SoftKeyboardEvent.SOFT_KEYBOARD_ACTIVATING || 
+				type==SoftKeyboardEvent.SOFT_KEYBOARD_DEACTIVATE ||
+				type==Event.CHANGE
+			){
+				_stageText.addEventListener(type,listener,useCapture,priority,useWeakReference);
+			}
+			else{
+				super.addEventListener(type,listener,useCapture,priority,useWeakReference);
+			}
+		}
+		
+		public override function removeEventListener(type:String, listener:Function, useCapture:Boolean=false):void{
+			if(type==SoftKeyboardEvent.SOFT_KEYBOARD_ACTIVATE || 
+				type==SoftKeyboardEvent.SOFT_KEYBOARD_ACTIVATING || 
+				type==SoftKeyboardEvent.SOFT_KEYBOARD_DEACTIVATE ||
+				type==Event.CHANGE
+			){
+				_stageText.removeEventListener(type,listener,useCapture);
+			}
+			else{
+				super.removeEventListener(type,listener,useCapture);
+			}
+		}
+	}
+}

@@ -1,0 +1,212 @@
+﻿package nt.imagine.exif.core{
+	import flash.display.Sprite;
+	import flash.utils.ByteArray;
+	import flash.utils.Endian;
+	
+	import nt.imagine.exif.prototype.IFDEntry;
+	import nt.imagine.exif.prototype.RATIONAL;
+	import nt.utils.ByteEncoder;
+
+
+	public class ExifCore extends Sprite {
+
+		private var bytedata:ByteArray=null;
+		private var IFDN_POS:uint=0;
+		private var IFD0:uint;
+		private var Exif0:uint;
+		private var Gps0:uint;
+		private var InteroIFD:uint;
+		private var IFD1:uint;
+		public var entryArr:Vector.<IFDEntry>=new Vector.<IFDEntry>;
+		private var tbnPos:uint;
+		private var tbnLen:uint;
+		public var tbnStream:ByteArray=new ByteArray();
+
+
+		public function ExifCore() {
+
+		}
+		
+
+		public function setDataHeader(temp_bytedata:ByteArray):void {
+			bytedata=temp_bytedata;
+			if (bytedata[0]==73) {
+				bytedata.endian=Endian.LITTLE_ENDIAN;
+			} else {
+				bytedata.endian=Endian.BIG_ENDIAN;
+			}
+		}
+		
+
+		public function goAnalyse():void {
+			IFD0=getIFD0();
+
+			if (IFDN_POS<bytedata.length) {
+				IFD1=getIFDN(IFDN_POS);
+			}
+			listEntry(IFD0);
+			if (IFD1<bytedata.length) {
+				listEntry(IFD1);
+			}
+			chkExif0();
+			chkGPS0();
+		}
+
+		private function getIFD0():uint {
+			bytedata.position=4;
+			IFDN_POS=bytedata.readUnsignedInt();
+			return IFDN_POS;
+		}
+
+		private function getIFDN(startPos:uint):uint {
+			var entries:uint=bytedata.readUnsignedShort();
+			bytedata.position=startPos + 2 + 12 * entries;
+			IFDN_POS=bytedata.readUnsignedInt();
+			return IFDN_POS;
+		}
+
+		private function listEntry(ifdoffset:uint):void {
+			var entriesNum:uint=0;
+			var EntryObj:IFDEntry;
+
+			bytedata.position=ifdoffset;
+
+			try {
+				entriesNum=bytedata.readUnsignedShort();
+				if (entriesNum<bytedata.length) {
+					for (var i:int=0; i < entriesNum; i++) {
+						EntryObj=getEntry(bytedata,ifdoffset + 2 + 12 * i,i);
+						entryArr[entryArr.length]=EntryObj;
+					}
+				}
+			} catch (e:Error) {
+				throw new CustomError("listEntryError");
+			}
+		}
+
+		private function getEntry(bytedata:ByteArray,posNum:uint,countNum:uint):IFDEntry {
+			var Obj:IFDEntry;
+			var mtag:uint=0;
+			var mtype:uint=0;
+			var mvalue:Object;
+			var temp_data:ByteArray;
+			var temp_count:uint;
+			var temp_mark:uint;
+			try {
+				bytedata.position=posNum;
+
+				mtag=bytedata.readUnsignedShort();
+				mtype=bytedata.readUnsignedShort();
+
+				temp_count=bytedata.readUnsignedInt();
+
+				switch (mtype) {
+					case 1 :
+						mvalue=bytedata.readUnsignedByte();
+						break;
+					case 2 :
+						if (temp_count <= 4) {
+							mvalue=get4ASCII(temp_count);
+						} else {
+							temp_data=new ByteArray  ;
+							temp_mark=bytedata.readUnsignedInt();
+							bytedata.position=temp_mark;
+							bytedata.readBytes(temp_data,0,temp_count);
+							mvalue=ByteEncoder.EncodeUtf8(temp_data.toString());
+						}
+						break;
+					case 3 :
+						mvalue=bytedata.readUnsignedShort();
+						break;
+					case 4 :
+						mvalue=bytedata.readUnsignedInt();
+						break;
+					case 5 :
+						temp_mark=bytedata.readUnsignedInt();
+						bytedata.position=temp_mark;
+						mvalue=new RATIONAL(bytedata.readUnsignedInt(),bytedata.readUnsignedInt()).getNum();
+						break;
+					case 7 :
+						if (temp_count <= 4) {
+							mvalue=get4ASCII(temp_count);
+						} else {
+							temp_data=new ByteArray  ;
+							temp_mark=bytedata.readUnsignedInt();
+							bytedata.position=temp_mark;
+							bytedata.readBytes(temp_data,0,temp_count);
+							mvalue=ByteEncoder.EncodeUtf8(temp_data.toString());
+
+						}
+						break;
+					case 9 :
+						mvalue=bytedata.readInt();
+						break;
+					case 10 :
+						temp_mark=bytedata.readInt();
+						bytedata.position=temp_mark;
+						mvalue=new RATIONAL(bytedata.readInt(),bytedata.readInt()).getNum();
+						break;
+				}
+				
+				if (mtag == 34665) {
+					Exif0=mvalue as uint;
+				} else if(mtag == 34853) {
+					Gps0=mvalue as uint;
+				} else if(mtag == 513) {
+					tbnPos=mvalue as uint;
+				} else if(mtag == 514) {
+					tbnLen=mvalue as uint;
+				}
+			} catch (e:Error) {
+				throw new CustomError("getEntryError");
+			}
+			Obj=new IFDEntry(mtag,mtype,mvalue);
+			return Obj;
+		}
+
+		private function get4ASCII(count:uint):String {
+			var tempStr:String=new String("");
+
+			for (var j:uint=0; j<count; j++) {
+				var asc:uint=bytedata.readUnsignedByte();
+				tempStr+=String.fromCharCode(asc);
+			}
+			return tempStr;
+		}
+
+		private function chkExif0():void {
+			if (Exif0 != 0) {
+				listEntry(Exif0);
+			}
+		}
+
+		private function chkGPS0():void {
+			if (Gps0 != 0) {
+				listEntry(Gps0);
+			}
+		}
+
+		public function iniThumb():Boolean {
+			if (tbnPos & tbnLen) {
+				bytedata.position = tbnPos
+				bytedata.readBytes(tbnStream, 0, tbnLen);
+				return true
+			}else{
+				return false
+			}
+		}
+	}
+}
+
+class CustomError extends Error {
+	public function CustomError(message:String) {
+		switch (message) {
+			case "listEntryError" :
+				trace("Get IFD list error")
+				break;
+			case "getEntryError" :
+				trace("Get entry list  error")
+				break;
+		}
+	}
+}

@@ -1,0 +1,192 @@
+package Page.More.Setting
+{
+	import com.thanksmister.touchlist.controls.TouchList;
+	import com.thanksmister.touchlist.renderers.DisplayObjectItemRenderer;
+	
+	import flash.display.Bitmap;
+	import flash.display.SimpleButton;
+	import flash.display.Sprite;
+	import flash.events.Event;
+	import flash.events.MouseEvent;
+	import flash.filesystem.File;
+	import flash.filesystem.FileMode;
+	import flash.filesystem.FileStream;
+	import flash.text.AntiAliasType;
+	import flash.text.TextField;
+	import flash.text.TextFieldAutoSize;
+	import flash.text.TextFieldType;
+	import flash.text.TextFormat;
+	import flash.text.TextFormatAlign;
+	
+	import Page.BasePage;
+	
+	import kr.pe.hs.ui.TabbedButton;
+	
+	public class Version extends BasePage
+	{
+		[Embed(source = "assets/top_menu/button_prev.png")]
+		private var BUTTON_PREV:Class;
+		[Embed(source = "assets/top_menu/button_prev_on.png")]
+		private var BUTTON_PREV_ON:Class;
+		
+		[Embed(source = "assets/page/more/setting/index/title.png")]
+		private var TITLE:Class;
+		
+		[Embed(source = "assets/page/more/setting/version/bg.png")]
+		private var BG:Class;
+		private var _bmp_bg:Bitmap;
+		
+		[Embed(source="assets/page/more/setting/version/button_update.png")]
+		private var BUTTON_UPDATE:Class;
+		[Embed(source = "assets/page/more/setting/version/button_update_on.png")]
+		private var BUTTON_UPDATE_ON:Class;
+		private var _button_update:TabbedButton;
+		
+		private var _lattest_version:String;	
+		
+		private var _listSprite:Vector.<Sprite>;
+		private var _touchList:TouchList;
+		private var _dialogHeight:Number;
+				
+		public function Version()
+		{
+			super();
+			_dialogHeight = 0;
+			
+			//top menu
+			Elever.Main.TopMenu.clearAddedChild();
+			Elever.Main.TopMenuVisible=true;
+			
+			var bmpTitle:Bitmap=new TITLE;
+			bmpTitle.smoothing=true;
+			Elever.Main.TopMenu.Title=bmpTitle;
+			
+			var buttonPrev:Bitmap=new BUTTON_PREV;
+			buttonPrev.smoothing=true;
+			var buttonPrevOn:Bitmap=new BUTTON_PREV_ON;
+			buttonPrevOn.smoothing=true;
+			Elever.Main.TopMenu.LeftButton=new SimpleButton(buttonPrev,buttonPrev,buttonPrevOn,buttonPrev);
+			Elever.Main.TopMenu.LeftButton.addEventListener(MouseEvent.CLICK,prev_onClick);
+			
+			//bottom menu
+			Elever.Main.BottomMenuVisible=true;
+			Elever.Main.BottomMenu.setCursor(BottomMenuSprite.CURSOR_MORE);
+			
+			
+			_listSprite = new Vector.<Sprite>(1, true);
+			
+			_listSprite[0] = new Sprite;
+			_listSprite[0].graphics.beginFill(0x000000,0);
+			_listSprite[0].graphics.drawRect(0,0,485,1);
+			_listSprite[0].graphics.endFill();
+			
+			//bg
+			_bmp_bg = new BG;
+			_bmp_bg.smoothing = true;
+			_bmp_bg.x = 110;
+			_bmp_bg.y = 152-75;
+			_listSprite[0].addChild(_bmp_bg);
+			
+			//latest version text
+			//추후에 서버 연동으로 바꿀것.
+			_lattest_version = "1.0.0";
+			
+			var txt:TextField = new TextField;
+			txt.type = TextFieldType.DYNAMIC;
+			txt.x = 62; txt.y = 193-75; txt.width = 171; txt.height = 81;
+			var fmt:TextFormat = new TextFormat;
+			fmt = txt.defaultTextFormat; fmt.font = "Main"; fmt.color = 0x595959; fmt.size = txt.height/1.3; fmt.align = TextFormatAlign.CENTER; txt.defaultTextFormat = fmt;
+			txt.embedFonts = true;
+			txt.antiAliasType = AntiAliasType.ADVANCED;
+			txt.text = _lattest_version;
+			_listSprite[0].addChild(txt);
+			
+			//current version text
+			
+			txt = new TextField;
+			txt.type = TextFieldType.DYNAMIC;
+			txt.x = 299; txt.y = 193-75; txt.width = 171; txt.height = 81;
+			fmt = new TextFormat;
+			fmt = txt.defaultTextFormat; fmt.font = "Main"; fmt.color = 0x595959; fmt.size = txt.height/1.3; fmt.align = TextFormatAlign.CENTER; txt.defaultTextFormat = fmt;
+			txt.embedFonts = true;
+			txt.antiAliasType = AntiAliasType.ADVANCED;
+			txt.text = Config.VERSION;
+			_listSprite[0].addChild(txt);
+			
+			//version check text
+			txt = new TextField;
+			txt.type = TextFieldType.DYNAMIC;
+			txt.x = 0; txt.y = 350-75; txt.width = 0; txt.height = 20;
+			fmt = new TextFormat;
+			fmt = txt.defaultTextFormat; fmt.font = "Main"; fmt.color = 0xa0a0a0; fmt.size = txt.height/1.3; fmt.align = TextFormatAlign.CENTER; txt.defaultTextFormat = fmt;
+			txt.embedFonts = true;
+			txt.antiAliasType = AntiAliasType.ADVANCED;
+			
+			if(Config.VERSION == _lattest_version)
+			{
+				txt.text = "현재 최신버전 사용중입니다.";
+				txt.x = 162;
+				txt.width = 221;
+			}
+			else
+			{
+				txt.text = "최신버전이 아닙니다. 업데이트가 필요합니다.";
+				txt.x = 100;
+				txt.width = 343;
+			}
+				
+			_listSprite[0].addChild(txt);
+			
+			//logout
+			var bmp_update:Bitmap=new BUTTON_UPDATE;
+			bmp_update.smoothing=true;
+			var bmp_update_on:Bitmap=new BUTTON_UPDATE_ON;
+			bmp_update_on.smoothing=true;
+			_button_update=new TabbedButton(bmp_update,bmp_update_on,bmp_update_on);
+			_button_update.x=27;
+			_button_update.y=407-75;
+			_button_update.addEventListener(MouseEvent.CLICK,onUpdate);
+			_listSprite[0].addChild(_button_update);
+			
+			_touchList=new TouchList(Elever.Main.PageWidth,Elever.Main.PageHeight);
+			_touchList.addEventListener(Event.ADDED_TO_STAGE,touchList_onAdded);
+			addChild(_touchList);
+		}
+		
+		private function touchList_onAdded(e:Event=null):void
+		{
+			_touchList.removeListItems();
+			onResize();
+			for(var i:int = 0; i < _listSprite.length; i++) 
+			{
+				//_listSprite[i].x=_touchList.width/2-_listSprite[i].width/2
+				_touchList.addListItem(new DisplayObjectItemRenderer(_listSprite[i]));
+			}
+		}
+		
+		private function prev_onClick(e:MouseEvent):void
+		{
+			Elever.Main.setPage("eleverMoreSettingPage",null,EleverPageEffect.RIGHT,EleverPageEffect.RIGHT);
+		}
+		
+		private function onUpdate(e:MouseEvent):void
+		{
+			
+			if(Config.VERSION != _lattest_version)
+			{
+				Elever.Main.setPage("eleverMoreSettingPage",null,EleverPageEffect.RIGHT,EleverPageEffect.RIGHT);
+			}
+			else
+				new Alert("이미 최신버전 사용중입니다.").show();
+		}
+		
+		public override function onResize():void
+		{
+			_touchList.resize(Elever.Main.PageWidth,Elever.Main.PageHeight-_dialogHeight);
+		}
+		
+		public override function dispose():void{
+			
+		}
+	}
+}

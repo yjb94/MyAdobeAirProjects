@@ -1,0 +1,711 @@
+package Page.Calendar
+{
+	import flash.display.Bitmap;
+	import flash.display.BitmapData;
+	import flash.display.Sprite;
+	import flash.events.MouseEvent;
+	import flash.events.TransformGestureEvent;
+	import flash.filesystem.File;
+	import flash.filesystem.FileMode;
+	import flash.filesystem.FileStream;
+	import flash.geom.Point;
+	import flash.net.URLVariables;
+	import flash.text.AntiAliasType;
+	import flash.text.TextField;
+	import flash.text.TextFieldAutoSize;
+	import flash.text.TextFormat;
+	import flash.ui.Multitouch;
+	import flash.ui.MultitouchInputMode;
+	
+	import Page.BasePage;
+	
+	import kr.pe.hs.tween.Tween;
+	import kr.pe.hs.ui.TabbedButton;
+	
+	public class Index extends BasePage
+	{
+		[Embed(source = "assets/top_menu/button_prev.png")]
+		private var BUTTON_PREV:Class;
+		[Embed(source = "assets/top_menu/button_prev_on.png")]
+		private var BUTTON_PREV_ON:Class;
+		
+		[Embed(source = "assets/top_menu/button_next.png")]
+		private var BUTTON_NEXT:Class;
+		[Embed(source = "assets/top_menu/button_next_on.png")]
+		private var BUTTON_NEXT_ON:Class;
+		
+		[Embed(source = "assets/top_menu/button_plus.png")]
+		private var BUTTON_PLUS:Class;
+		[Embed(source = "assets/top_menu/button_plus_on.png")]
+		private var BUTTON_PLUS_ON:Class;
+		
+		private var _titleSprite:Sprite;
+		private var _buttonPrev:TabbedButton;
+		private var _buttonNext:TabbedButton;
+		private var _textCurrentDate:TextField;
+		
+		private var _bg:Sprite;
+		
+		private var _dayOfWeek:Sprite;
+		
+		private var _calendar:Sprite;
+		private var _calendarCursor:Sprite;
+		private var _calendarBar:Sprite;
+		private var _calendarGrid:Sprite;
+		
+		private var _gestureArea:Sprite;
+		
+		private var _calendarBitmapData:BitmapData;
+		private var _calendarBitmap:Bitmap;
+		private var _calendarBitmapTween:Tween;
+		
+		private var _prevCalendarBitmapData:BitmapData;
+		private var _prevCalendarBitmap:Bitmap;
+		private var _prevCalendarBitmapTween:Tween;
+		
+		private var _currentYear:int;
+		private var _currentMonth:int;
+		private var _currentRowWidth:Number;
+		private var _currentRowHeight:Number;
+		private var _currentStartDayOfWeek:Number;
+		private var _currentRows:Number;
+		
+		private var _currentPage:int=0;
+		private var _currentList:Array;
+		
+		private var _selectedItemCol:int;
+		private var _selectedItemRow:int;
+		
+		private static var _calendarList:Object;
+		public static function get CalendarListCache():Object{ return _calendarList; }
+		public static function loadEnviroment():void{
+			//return;
+			var appStorage:File=File.applicationStorageDirectory;
+			var dbFile:File = appStorage.resolvePath("calendar.db");
+			if(dbFile.exists){
+				var fs:FileStream=new FileStream;
+				fs.open(dbFile,FileMode.READ);
+				var result:Object=JSON.parse(fs.readUTF());
+				fs.close();
+				
+				_calendarList=result;
+			}
+			if(_calendarList==null) _calendarList=new Object;
+		}
+		
+		public static function saveEnviroment():void{
+			if(_calendarList==null) return;
+			
+			var appStorage:File=File.applicationStorageDirectory;
+			var dbFile:File = appStorage.resolvePath("calendar.db");
+			var fs:FileStream=new FileStream;
+			fs.open(dbFile,FileMode.WRITE);
+			fs.writeUTF(JSON.stringify(_calendarList));
+			fs.close();
+		}
+		
+		
+		public function Index()
+		{
+			super();
+			
+			Elever.Main.TopMenu.clearAddedChild();
+			Elever.Main.TopMenuVisible=true;
+			Elever.Main.BottomMenuVisible=true;
+			Elever.Main.BottomMenu.setCursor(BottomMenuSprite.CURSOR_CALENDAR);
+			
+			_titleSprite=new Sprite;
+			var buttonPrev:Bitmap=new BUTTON_PREV; buttonPrev.smoothing=true;
+			var buttonPrevOn:Bitmap=new BUTTON_PREV_ON; buttonPrevOn.smoothing=true;
+			var buttonNext:Bitmap=new BUTTON_NEXT; buttonNext.smoothing=true;
+			var buttonNextOn:Bitmap=new BUTTON_NEXT_ON; buttonNextOn.smoothing=true;
+			_buttonPrev=new TabbedButton(buttonPrev,buttonPrevOn,buttonPrevOn);
+			_buttonPrev.addEventListener(MouseEvent.CLICK,prev_onClick);
+			_buttonNext=new TabbedButton(buttonNext,buttonNextOn,buttonNextOn);
+			_buttonNext.addEventListener(MouseEvent.CLICK,next_onClick);
+			_titleSprite.addChild(_buttonPrev);
+			_titleSprite.addChild(_buttonNext);
+			_textCurrentDate=new TextField;
+			var fmt:TextFormat=_textCurrentDate.defaultTextFormat;
+			fmt.color=0xFFFFFF;
+			fmt.font="Main";
+			fmt.size=35;
+			_textCurrentDate.defaultTextFormat=fmt;
+			_textCurrentDate.autoSize=TextFieldAutoSize.LEFT;
+			_textCurrentDate.selectable=false;
+			_textCurrentDate.embedFonts=true;
+			_textCurrentDate.antiAliasType=AntiAliasType.ADVANCED;
+			_textCurrentDate.text="";
+			_titleSprite.addChild(_textCurrentDate);
+			
+			var buttonPlus:Bitmap=new BUTTON_PLUS; buttonPlus.smoothing=true;
+			var buttonPlusOn:Bitmap=new BUTTON_PLUS_ON; buttonPlusOn.smoothing=true;
+			Elever.Main.TopMenu.RightButton=new TabbedButton(buttonPlus,buttonPlusOn,buttonPlusOn);
+			Elever.Main.TopMenu.RightButton.addEventListener(MouseEvent.CLICK,buttonAdd_onClick);
+			
+			_bg=new Sprite;
+			_bg.graphics.beginFill(0xFFFFFF,0.5);
+			_bg.graphics.drawRect(0,0,100,100);
+			_bg.graphics.endFill();
+			_bg.cacheAsBitmap=true;
+			addChild(_bg);
+			
+			_calendar=new Sprite;
+			_calendar.y=33;
+			addChild(_calendar);
+			_calendarCursor=new Sprite;
+			_calendar.addChild(_calendarCursor);
+			_calendarBar=new Sprite;
+			_calendar.addChild(_calendarBar);
+			_calendarGrid=new Sprite;
+			_calendar.addChild(_calendarGrid);
+			
+			_dayOfWeek=new Sprite;
+			addChild(_dayOfWeek);
+			
+			_gestureArea=new Sprite;
+			addChild(_gestureArea);
+			Multitouch.inputMode=MultitouchInputMode.GESTURE;
+			_gestureArea.addEventListener(TransformGestureEvent.GESTURE_SWIPE,onSwipeGesture);
+			_gestureArea.addEventListener(MouseEvent.MOUSE_DOWN,area_onMouseDown);
+			
+			
+			if(_calendarList==null) throw new Error("달력 환경설정 파일이 로드되지 않았습니다.");
+			
+			var currentDate:Date=new Date;
+			if(Elever.Main.PageParameters){
+				if(Elever.Main.PageParameters.ym){
+					var ym:String=Elever.Main.PageParameters.ym;
+					currentDate.setFullYear(parseInt(ym.substr(0,4)),parseInt(ym.substr(4,2))-1,1);
+				}					
+			}
+			setCalendar(currentDate.fullYear,currentDate.month,false);
+			
+		}
+		
+		public override function onResize():void{
+			_bg.width=Elever.Main.PageWidth;
+			_bg.height=Elever.Main.PageHeight;
+			
+			_gestureArea.graphics.clear();
+			_gestureArea.graphics.beginFill(0x000000,0);
+			_gestureArea.graphics.drawRect(0,0,Elever.Main.PageWidth,Elever.Main.PageHeight);
+			_gestureArea.graphics.endFill();
+			
+			setCalendar(_currentYear,_currentMonth,false);
+		}
+		
+		public override function dispose():void{
+			if(_prevCalendarBitmap){
+				_prevCalendarBitmap.parent.removeChild(_prevCalendarBitmap);
+				_prevCalendarBitmap=null;
+			}
+			if(_prevCalendarBitmapData){
+				_prevCalendarBitmapData.dispose();
+				_prevCalendarBitmapData=null;
+			}
+			if(_prevCalendarBitmapTween){
+				_prevCalendarBitmapTween.endTween();
+				_prevCalendarBitmapTween=null;
+			}
+			if(_calendarBitmap){
+				_calendarBitmap.parent.removeChild(_calendarBitmap);
+				_calendarBitmap=null;
+			}
+			if(_calendarBitmapData){
+				_calendarBitmapData.dispose();
+				_calendarBitmapData=null;
+			}
+			if(_calendarBitmapTween){
+				_calendarBitmapTween.endTween();
+				_calendarBitmapTween=null;
+			}
+			
+			Elever.Main.TopMenu.RightButton.removeEventListener(MouseEvent.CLICK,buttonAdd_onClick);
+			_titleSprite.removeChild(_textCurrentDate);
+			_titleSprite.removeChild(_buttonPrev);
+			_titleSprite.removeChild(_buttonNext);
+			_buttonPrev.removeEventListener(MouseEvent.CLICK,prev_onClick);
+			_buttonNext.removeEventListener(MouseEvent.CLICK,next_onClick);
+			_buttonPrev=null;
+			_buttonNext=null;
+			_textCurrentDate=null;
+			_calendar.removeChild(_calendarCursor);
+			_calendarCursor=null;
+			_calendar.removeChild(_calendarBar);
+			_calendarBar=null;
+			_calendar.removeChild(_calendarGrid);
+			_calendarGrid=null;
+			removeChild(_calendar);
+			_calendar=null;
+			removeChild(_dayOfWeek);
+			_dayOfWeek=null;
+			Multitouch.inputMode=MultitouchInputMode.NONE;
+			_gestureArea.removeEventListener(TransformGestureEvent.GESTURE_SWIPE,onSwipeGesture);
+			_gestureArea.removeEventListener(MouseEvent.MOUSE_DOWN,area_onMouseDown);
+			removeChild(_gestureArea);
+			_gestureArea=null;
+		}
+		
+		private function buttonAdd_onClick(e:MouseEvent):void{
+			Elever.Main.setPage("eleverCalendarScheduleRegPage");
+		}
+		
+		private function onSwipeGesture(e:TransformGestureEvent):void{
+			if(e.offsetY>0){
+				setCalendar(_currentYear,_currentMonth-1);
+			}
+			else if(e.offsetY<0){
+				setCalendar(_currentYear,_currentMonth+1);
+			}
+		}
+
+		private function area_onMouseDown(e:MouseEvent):void{
+			var col:int=Math.floor(e.localX/_currentRowWidth);
+			var row:int=Math.floor((e.localY-33)/_currentRowHeight);
+			
+			if(col<0 || row<0){
+				_selectedItemCol=-1;
+				_selectedItemRow=-1;
+				return;
+			}
+			
+			_selectedItemCol=col;
+			_selectedItemRow=row;
+			
+			_calendarCursor.x=col*_currentRowWidth;
+			_calendarCursor.y=row*_currentRowHeight;
+			_calendarCursor.visible=true;
+			
+			stage.addEventListener(MouseEvent.MOUSE_UP,area_onMouseUp);
+		}
+		
+		private function area_onMouseUp(e:MouseEvent):void{
+			stage.removeEventListener(MouseEvent.MOUSE_UP,area_onMouseUp);
+			
+			var localPoint:Point=_gestureArea.globalToLocal(new Point(e.stageX,e.stageY));
+			
+			var col:int=Math.floor(localPoint.x/_currentRowWidth);
+			var row:int=Math.floor((localPoint.y-33)/_currentRowHeight);
+			
+			_calendarCursor.visible=false;
+			
+			if(_selectedItemCol==col && _selectedItemRow==row){
+				var currentDate:Date=new Date(_currentYear,_currentMonth,1);
+				currentDate.setDate(-_currentStartDayOfWeek+1);
+				currentDate.date+=row*7+col;
+						
+				var ymd:String=currentDate.fullYear.toString();
+				if(currentDate.month+1<10) ymd+="0";
+				ymd+=(currentDate.month+1).toString();
+				if(currentDate.date<10) ymd+="0";
+				ymd+=(currentDate.date).toString();
+				
+				Elever.Main.setPage("eleverCalendarSchedulePage",{ymd:ymd});
+			}
+		}
+		
+		private function prev_onClick(e:MouseEvent):void{
+			setCalendar(_currentYear,_currentMonth-1);
+		}
+		
+		private function next_onClick(e:MouseEvent):void{
+			setCalendar(_currentYear,_currentMonth+1);
+		}
+		
+		private function loadCalendar(page:int=0):void{
+			//Elever.Main.LoadingVisible=true;
+			var params:URLVariables=new URLVariables;
+			
+			params.user_seq=Elever.UserInfo.user_seq;
+			params.room_seq=Elever.UserInfo.room_seq;
+			
+			params.ym=_currentYear.toString();
+			if(_currentMonth+1<10) params.ym+="0";
+			params.ym+=(_currentMonth+1).toString();
+			params.page_no=page;
+			_currentPage=page;
+			
+			Elever.Connection.post("eleverCalendarSelectAction.tiein",params,onLoadComplete);
+		}
+		
+		private function onLoadComplete(data:String):void{
+			//Elever.Main.LoadingVisible=false;
+			if(_calendar==null) return;
+			
+			if(data){
+				var result:Object=JSON.parse(data);
+				
+				if(result.j_errorMsg.length>0){
+					new Alert(result.j_errorMsg).show();
+					return;
+				}
+				
+				var urlParams:URLVariables=Elever.Connection.CurrentParameters;
+				
+				var ym:String;
+				ym=_currentYear.toString();
+				if(_currentMonth+1<10) ym+="0";
+				ym+=(_currentMonth+1).toString();
+				
+				if(urlParams.ym!=ym){
+					return;
+				}
+				
+				if(result.j_page_no==0){
+					_currentList=new Array;
+				}
+				
+				var list:Array=result.j_list;
+				for(var i:int=0;i<list.length;i++){ 
+					_currentList[_currentList.length]=list[i];
+				}
+				
+				if(list.length==10){
+					loadCalendar(_currentPage+1);
+				}
+				else{
+					_calendarList[ym]=_currentList;
+					drawSchedules();
+				}
+			}
+		}
+		
+		private function drawSchedules():void{
+			var i:int,j:int;
+			
+			var ym:String;
+			ym=_currentYear.toString();
+			if(_currentMonth+1<10) ym+="0";
+			ym+=(_currentMonth+1).toString();
+			
+			var dateStickers:Vector.<int>;
+			var dateBar:Vector.<int>;
+			dateStickers=new Vector.<int>(7*6,true);
+			dateBar=new Vector.<int>(7*6,true);
+
+			for(i=0;i<dateStickers.length;i++){
+				dateStickers[i]=0;
+				dateBar[i]=0;
+			}
+			_calendarBar.graphics.clear();
+			for(i=0;i<_calendar.numChildren;i++){
+				if(_calendar.getChildAt(i) is Bitmap && _calendar.getChildAt(i).name=="sticker"){
+					//var old_sticker:Bitmap=_calendar.getChildAt(i) as Bitmap;
+					_calendar.removeChildAt(i);
+					i--;
+				}
+			}
+			
+			var firstDate:Date=new Date(_currentYear,_currentMonth,1);
+			firstDate.setDate(-_currentStartDayOfWeek+1);
+						
+			if(_calendarList[ym]==null) return;
+			
+			var list:Array=_calendarList[ym];
+			for(i=0;i<list.length;i++){ 
+				if(list[i].calendar_type=="01" && (list[i].s_ymd.substr(0,6)==ym || list[i].e_ymd.substr(0,6)==ym)){
+					
+					var startDate:Date=new Date(parseInt(list[i].s_ymd.substr(0,4)),parseInt(list[i].s_ymd.substr(4,2))-1,parseInt(list[i].s_ymd.substr(6,2)));
+					var start_idx:int=Math.floor((startDate.getTime()-firstDate.getTime())/1000/60/60/24);
+					if(start_idx<0) start_idx=0;
+					var start_row:int=Math.floor(start_idx/7);
+					var start_col:int=start_idx%7;
+					
+					if(list[i].s_ymd==list[i].e_ymd){
+						//스티커
+						//var ymd:Date=new Date(_currentYear,_currentMonth,parseInt(list[i].s_ymd.substr(6)));
+						
+						if(dateStickers[start_idx]<4){
+							var sticker:Bitmap=new StickerPicker.Stickers[list[i].item_seq];
+							sticker.smoothing=true;
+							sticker.name="sticker";
+							sticker.x=start_col*_currentRowWidth+5+(dateStickers[start_idx]%2)*(_currentRowWidth-10)/2;
+							sticker.y=start_row*_currentRowHeight+35+Math.floor(dateStickers[start_idx]/2)*(_currentRowHeight-35-5)/2;
+							sticker.scaleX=0.5;
+							sticker.scaleY=0.5;
+							_calendar.addChild(sticker);
+							
+							dateStickers[start_idx]++;
+						}
+					}
+					else{
+						var endDate:Date=new Date(parseInt(list[i].e_ymd.substr(0,4)),parseInt(list[i].e_ymd.substr(4,2))-1,parseInt(list[i].e_ymd.substr(6,2)));
+						var end_idx:int=Math.floor((endDate.getTime()-firstDate.getTime())/1000/60/60/24);
+						if(end_idx>=_currentRows*7) end_idx=_currentRows*7-1;
+						var end_row:int=Math.floor(end_idx/7);
+						var end_col:int=end_idx%7;
+						
+						var bit:int=0;
+						for(j=start_idx;j<=end_idx;j++){
+							bit|=dateBar[start_idx];
+						}
+						var bar_row:int=0;
+						while(bit%2!=0){
+							bit=bit>>1;
+							bar_row++;
+						}
+						
+						if((bar_row+1)*30<_currentRowHeight){
+							_calendarBar.graphics.beginFill(parseInt(list[i].color,16),1);
+							for(j=start_row;j<=end_row;j++){
+								var bar_x:int=0;//start_col*_currentRowWidth;
+								var bar_y:int=j*_currentRowHeight+bar_row*30;
+								var bar_width:int=7*_currentRowWidth;//(end_col-start_col+1)*_currentRowWidth;
+								var bar_height:int=30;
+								
+								if(j==start_row){
+									bar_width-=start_col*_currentRowWidth;
+									bar_x+=start_col*_currentRowWidth;
+								}
+								if(j==end_row) bar_width-=(7-end_col-1)*_currentRowWidth;
+								if(bar_x!=0) bar_x+=1;
+								
+								_calendarBar.graphics.drawRect(bar_x,bar_y,bar_width,bar_height);
+							}
+							_calendarBar.graphics.endFill();
+							
+							if(Math.floor((startDate.getTime()-firstDate.getTime())/1000/60/60/24)==start_idx){
+								//시작 표시 있음
+								_calendarBar.graphics.beginFill(ColorPicker.getHighlightColor(parseInt(list[i].color,16)),1);
+								_calendarBar.graphics.drawRect(start_col*_currentRowWidth,start_row*_currentRowHeight+bar_row*30,6,30);
+								_calendarBar.graphics.endFill();
+							}
+							
+							
+							bit=Math.pow(2,bar_row);
+							for(j=start_idx;j<=end_idx;j++){
+								dateBar[j]|=bit;
+							}
+						}
+					}
+				}
+			}
+		}
+		
+		private function setCalendar(year:int,month:int,animate:Boolean=true):void{
+			var currentDate:Date=new Date(year,month,1);
+			var now:Date=new Date;
+			var animateType:int=1;
+			if(_currentYear<currentDate.fullYear || (_currentYear==currentDate.fullYear && _currentMonth<currentDate.month)) animateType=-1;
+			
+			if(_prevCalendarBitmap){
+				_prevCalendarBitmap.parent.removeChild(_prevCalendarBitmap);
+				_prevCalendarBitmap=null;
+			}
+			if(_prevCalendarBitmapData){
+				_prevCalendarBitmapData.dispose();
+				_prevCalendarBitmapData=null;
+			}
+			if(_prevCalendarBitmapTween){
+				_prevCalendarBitmapTween.endTween();
+				_prevCalendarBitmapTween=null;
+			}
+			if(_calendarBitmap){
+				_calendarBitmap.parent.removeChild(_calendarBitmap);
+				_calendarBitmap=null;
+			}
+			if(_calendarBitmapData){
+				_calendarBitmapData.dispose();
+				_calendarBitmapData=null;
+			}
+			if(_calendarBitmapTween){
+				_calendarBitmapTween.endTween();
+				_calendarBitmapTween=null;
+			}
+			
+			if(animate){
+				if(_calendar.width>0 && _calendar.height>0){
+					_prevCalendarBitmapData=new BitmapData(_calendar.width,_calendar.height,true,0x00FFFFFF);
+					_prevCalendarBitmapData.draw(_calendar);
+					_prevCalendarBitmap=new Bitmap(_prevCalendarBitmapData);
+					_prevCalendarBitmap.cacheAsBitmap=true;
+					addChildAt(_prevCalendarBitmap,0);
+					
+					var fadeoutCallbackY:Function=function(value:Number,isFinish:Boolean):void{
+						if(!_prevCalendarBitmap) return;
+						_prevCalendarBitmap.y=value;
+						if(isFinish){
+							_prevCalendarBitmap.parent.removeChild(_prevCalendarBitmap);
+							_prevCalendarBitmap=null;
+							
+							_prevCalendarBitmapData.dispose();
+							_prevCalendarBitmapData=null;
+							
+							_prevCalendarBitmapTween=null;
+						}
+					};
+					_prevCalendarBitmap.y=_calendar.y;
+					if(animateType<0){
+						_prevCalendarBitmapTween=new Tween(_prevCalendarBitmap.y,_prevCalendarBitmap.y-_prevCalendarBitmap.height,0,300,fadeoutCallbackY);
+					}
+					else{
+						_prevCalendarBitmapTween=new Tween(_prevCalendarBitmap.y,_prevCalendarBitmap.y+_prevCalendarBitmap.height,0,300,fadeoutCallbackY);
+					}
+					
+				}
+			}
+			
+			_currentYear=currentDate.fullYear;
+			_currentMonth=currentDate.month;
+			_textCurrentDate.text=_currentYear.toString()+"."+(_currentMonth+1).toString();
+			_textCurrentDate.x=_buttonPrev.width+15;
+			_textCurrentDate.y=_buttonPrev.height/2-_textCurrentDate.height/2+2;
+			_buttonNext.x=_textCurrentDate.x+_textCurrentDate.width+15;
+			Elever.Main.TopMenu.Title=_titleSprite;
+			
+			var i:int,j:int;
+			var txt:TextField,fmt:TextFormat;
+			
+			//요일
+			const dayOfWeekString:Vector.<String>=Vector.<String>(["SUN","MON","TUE","WED","THU","FRI","SAT"]);
+			while(_dayOfWeek.numChildren>0) _dayOfWeek.removeChildAt(0);
+			_dayOfWeek.graphics.clear();
+			
+			var dayOfWeekWidth:Number=Elever.Main.PageWidth/7;
+			_currentRowWidth=dayOfWeekWidth;
+			_dayOfWeek.graphics.beginFill(0xd6d6d6);
+			for(i=0;i<7;i++){
+				txt=new TextField;
+				fmt=txt.defaultTextFormat;
+				if(i==0) fmt.color=0xff4242;
+				else if(i==6) fmt.color=0x6585f0;
+				else fmt.color=0x595959;
+				fmt.font="Main";
+				fmt.size=22;
+				txt.defaultTextFormat=fmt;
+				txt.autoSize=TextFieldAutoSize.LEFT;
+				txt.selectable=false;
+				txt.embedFonts=true;
+				txt.antiAliasType=AntiAliasType.ADVANCED;
+				txt.text=dayOfWeekString[i];
+				_dayOfWeek.addChild(txt);
+				txt.x=Math.round((dayOfWeekWidth*i)+dayOfWeekWidth/2-txt.width/2);
+				txt.y=32/2-txt.height/2+2;
+				
+				if(i>0) _dayOfWeek.graphics.drawRect(Math.round(dayOfWeekWidth*i),0,1,33);
+			}
+			_dayOfWeek.graphics.drawRect(0,32,Elever.Main.PageWidth,1);
+			_dayOfWeek.graphics.endFill();
+			
+			
+			//달력
+			while(_calendar.numChildren>0) _calendar.removeChildAt(0);
+			_calendar.addChild(_calendarCursor);
+			_calendar.addChild(_calendarBar);
+			_calendarBar.graphics.clear();
+			_calendarGrid.graphics.clear();
+			_calendar.graphics.clear();
+			
+			currentDate.setFullYear(_currentYear,_currentMonth,1);
+			var startDayOfWeek:int=currentDate.day;
+			var dateCnt:int=0;
+			for(i=1;i<=31;i++){
+				currentDate.setDate(i);
+				if(currentDate.month==_currentMonth){
+					dateCnt++;
+				}
+				else{
+					break;
+				}
+			}
+			
+			var rows:int=Math.ceil((startDayOfWeek+dateCnt)/7);
+			if(rows==4){ 
+				rows=5;
+				startDayOfWeek+=7;
+			}
+			_currentStartDayOfWeek=startDayOfWeek;
+			_currentRows=rows;
+			var rowHeight:Number=(Elever.Main.PageHeight-_dayOfWeek.height)/rows;
+			_currentRowHeight=rowHeight;
+			currentDate.setFullYear(_currentYear,_currentMonth,1);
+			currentDate.setDate(-startDayOfWeek);
+			for(i=0;i<rows;i++){
+				for(j=0;j<7;j++){						
+					var idx:int=i*7+j;
+					currentDate.date++;
+					
+					txt=new TextField;
+					txt.x=j*dayOfWeekWidth
+					txt.y=i*rowHeight+7;
+					txt.width=dayOfWeekWidth-7;
+					fmt=txt.defaultTextFormat;
+					if(idx<startDayOfWeek || idx>=startDayOfWeek+dateCnt) fmt.color=0xafafaf;
+					else{
+						if(currentDate.day==0) fmt.color=0xee8586;
+						else if(currentDate.day==6) fmt.color=0x93b2f0;
+						else fmt.color=0x595959;
+					}
+					fmt.font="Main";
+					fmt.size=20;
+					txt.defaultTextFormat=fmt;
+					txt.autoSize=TextFieldAutoSize.RIGHT;
+					txt.selectable=false;
+					txt.embedFonts=true;
+					txt.antiAliasType=AntiAliasType.ADVANCED;
+					txt.text=currentDate.date.toString();
+					_calendar.addChild(txt);
+					
+					if(currentDate.fullYear==now.fullYear && currentDate.month==now.month && currentDate.date==now.date){
+						//오늘 표시
+						_calendar.graphics.beginFill(0xeaeaea,1);
+						_calendar.graphics.drawRect(j*dayOfWeekWidth,i*rowHeight,dayOfWeekWidth,rowHeight);
+						_calendar.graphics.endFill();
+					}
+				}
+			}
+			
+			_calendarCursor.visible=false;
+			_calendarCursor.graphics.beginFill(0xf3f3f3,1);
+			_calendarCursor.graphics.drawRect(0,0,dayOfWeekWidth,rowHeight);
+			_calendarCursor.graphics.endFill();
+			
+			//그리드
+			_calendarGrid.graphics.beginFill(0xd6d6d6);
+			for(i=1;i<rows;i++) _calendarGrid.graphics.drawRect(0,rowHeight*i,Elever.Main.PageWidth,1);
+			for(i=1;i<7;i++) _calendarGrid.graphics.drawRect(Math.round(dayOfWeekWidth*i),0,1,Elever.Main.PageHeight-_dayOfWeek.height);
+			_calendarGrid.graphics.endFill();
+			_calendar.addChild(_calendarGrid);
+			
+			//캐시 파일 드로우
+			drawSchedules();
+			
+			if(animate){
+				if(_calendar.width>0 && _calendar.height>0){
+					_calendarBitmapData=new BitmapData(_calendar.width,_calendar.height,true,0x00FFFFFF);
+					_calendarBitmapData.draw(_calendar);
+					_calendarBitmap=new Bitmap(_calendarBitmapData);
+					_calendarBitmap.cacheAsBitmap=true;
+					addChildAt(_calendarBitmap,0);
+					
+					var fadeinCallbackY:Function=function(value:Number,isFinish:Boolean):void{
+						if(!_calendarBitmap) return;
+						_calendarBitmap.y=value;
+						if(isFinish){
+							_calendar.visible=true;
+							
+							_calendarBitmap.parent.removeChild(_calendarBitmap);
+							_calendarBitmap=null;
+							
+							_calendarBitmapData.dispose();
+							_calendarBitmapData=null;
+							
+							_calendarBitmapTween=null;
+						}
+					};
+					_calendar.visible=false;
+					if(animateType<0){
+						_calendarBitmap.y=33+_calendarBitmap.height;
+					}
+					else{
+						_calendarBitmap.y=33-_calendarBitmap.height;
+					}				
+					_calendarBitmapTween=new Tween(_calendarBitmap.y,33,0,300,fadeinCallbackY);
+				}
+			}
+			
+			loadCalendar();
+		}
+	}
+}

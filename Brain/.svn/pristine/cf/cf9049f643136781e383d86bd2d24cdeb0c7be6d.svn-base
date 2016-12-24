@@ -1,0 +1,107 @@
+﻿package nt.imagine.exif{
+	import flash.events.EventDispatcher;
+	import flash.utils.ByteArray;
+	
+	import nt.imagine.exif.core.ExifCore;
+	import nt.imagine.exif.prototype.IFDEntry;
+	import nt.imagine.exif.prototype.Tags;
+
+	public class ExifExtractor extends EventDispatcher  {
+		private var data:ByteArray=null;
+		private var headdata:ByteArray=new ByteArray();
+		private var headlength:uint=0;
+		private var imgExif:ExifCore=new ExifCore;
+		private var ExifType:uint;
+		public var hasthumb:Boolean=false;
+		public function ExifExtractor(bytes:ByteArray) {
+			data=bytes;
+			data.position=0;
+			getHeader();
+		}
+
+		private function getHeader():void {
+			var jpgChk:Boolean=chkJpeg(data);
+			var exifiiChk:Boolean=ExifII(data);
+
+			if (! jpgChk) {
+				trace("Not a Jpeg file");
+			}
+
+			if (jpgChk && exifiiChk) {
+
+				if (ExifType == 1) {
+
+				} else if (ExifType == 2) {
+					data.readBytes(headdata,0,12);
+					headdata.position=4;
+				}
+				headlength=headdata.readUnsignedShort();
+				trace("EXIF head length: " + headlength + " bytes");
+				data.readBytes(headdata, 0, headlength);
+				getIFDArray();
+			}
+		}
+
+		private function getIFDArray():void {
+			imgExif.setDataHeader(headdata);
+			imgExif.goAnalyse();
+			hasthumb=imgExif.iniThumb();
+		}
+
+		private function getIFD():void {
+			imgExif.setDataHeader(headdata);
+		}
+		
+
+		private function chkJpeg(bytedata:ByteArray):Boolean {
+			if (bytedata[0] == 255 && bytedata[1] == 216 && bytedata[2] == 255 && bytedata[3] == 225 || bytedata[3] == 224) {
+				return true;
+			} else {
+				return false;
+			}
+		}
+
+		private function ExifII(bytedata:ByteArray):Boolean {
+			if (bytedata[6] == 69 && bytedata[7] == 120 && bytedata[8] == 105 && bytedata[9] == 102) {
+				ExifType=2;
+				trace("Get EXIF II successfully");
+				return true;
+			} else if (bytedata[24] == 69 && bytedata[25] == 120 && bytedata[26] == 105 && bytedata[27] == 102) {
+				ExifType=1;
+				trace("The current Exif Format is not supported.Only Exif2.2 is supported.");
+				return false;
+			} else {
+				trace("Don't have any ExifII information");
+				return false;
+			}
+		}
+
+		public function getThumb():ByteArray {
+			return imgExif.tbnStream;
+		}
+
+		public function getTagByTag(tagNum:uint):IFDEntry {
+			var obj:IFDEntry;
+			for each (var temp_ifd:IFDEntry in imgExif.entryArr) {
+				if (temp_ifd.tag == tagNum) {
+					obj=temp_ifd;
+					obj.EN=Tags.EXIF_TAGS[temp_ifd.tag].EN;
+					obj.CN=Tags.EXIF_TAGS[temp_ifd.tag].CN;
+					return obj;
+				}
+			}
+			return null;
+		}
+
+		public function getAllTag():Vector.<IFDEntry> {
+			var obj:Object=new Object();
+			for (var i:int=0; i<imgExif.entryArr.length; i++) {
+				if(Tags.EXIF_TAGS[imgExif.entryArr[i].tag]!=null){
+					imgExif.entryArr[i].EN=Tags.EXIF_TAGS[imgExif.entryArr[i].tag].EN;
+					imgExif.entryArr[i].CN=Tags.EXIF_TAGS[imgExif.entryArr[i].tag].CN;
+				}
+			}
+			return imgExif.entryArr;
+		}
+	}
+}

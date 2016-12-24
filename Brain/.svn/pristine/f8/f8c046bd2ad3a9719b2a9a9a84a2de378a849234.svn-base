@@ -1,0 +1,680 @@
+package
+{
+	import flash.desktop.NativeApplication;
+	import flash.display.Bitmap;
+	import flash.display.BitmapData;
+	import flash.display.MovieClip;
+	import flash.display.Sprite;
+	import flash.display.StageAlign;
+	import flash.display.StageScaleMode;
+	import flash.events.Event;
+	import flash.events.MouseEvent;
+	import flash.events.RemoteNotificationEvent;
+	import flash.filesystem.File;
+	import flash.filesystem.FileMode;
+	import flash.filesystem.FileStream;
+	import flash.geom.Rectangle;
+	import flash.net.URLVariables;
+	import flash.system.Capabilities;
+	
+	import Page.BasePage;
+	import Page.Album.Index;
+	import Page.Calendar.Index;
+	
+	import Popup.BasePopup;
+	
+	import kr.co.tiein.elever.HTTPUtil;
+	import kr.pe.hs.push.ApplePush;
+	import kr.pe.hs.tween.Tween;
+	
+	public class Elever extends Sprite
+	{
+		[Embed(source="assets/fonts/SeoulNamsanEB.ttf", mimeType = "application/x-font-truetype", fontName="Main", embedAsCFF=false)]
+		private static const fontMain:Class;
+		public static function get FontMain():Class{ return fontMain; }
+
+		public static const OriginalWidth:Number=540; //타겟 해상도의 원본 가로
+		public static const OriginalHeight:Number=960; //타겟 해상도의 원본 세로
+		
+		//메인 객체
+		private static var _eleverMain:Elever;
+		public static function get Main():Elever{ return _eleverMain; }
+		
+		//HTTP 서버 연동08SeoulNamsanM08SeoulNamsanMf
+		private static var _connection:HTTPUtil;
+		public static function get Connection():HTTPUtil{ return _connection; }
+		
+		//현재 사용자 정보
+		private static var _account:Object;
+		public static function get Account():Object{ return _account; }
+		public static function set Account(value:Object):void{ _account=value; }
+		private static var _userInfo:Object;
+		public static function get UserInfo():Object{ return _userInfo; }
+		public static function set UserInfo(value:Object):void{ _userInfo=value; }
+		
+		private static var _pushService:ApplePush;
+		public static function get PushService():ApplePush{ return _pushService; }
+		
+		public static function loadEnviroment():void{
+			//return;
+			var appStorage:File=File.applicationStorageDirectory;
+			var dbFile:File = appStorage.resolvePath("config.db");
+			if(dbFile.exists){
+				var fs:FileStream=new FileStream;
+				fs.open(dbFile,FileMode.READ);
+				var result:Object=JSON.parse(fs.readUTF());
+				fs.close();
+				
+				_account=result.account;
+				_userInfo=result.userInfo;
+			}
+		}
+		
+		public static function saveEnviroment():void{
+			var dbData:Object={
+				account:_account,
+				userInfo:_userInfo
+			};
+			
+			var appStorage:File=File.applicationStorageDirectory;
+			var dbFile:File = appStorage.resolvePath("config.db");
+			var fs:FileStream=new FileStream;
+			fs.open(dbFile,FileMode.WRITE);
+			fs.writeUTF(JSON.stringify(dbData));
+			fs.close();
+		}
+		
+		//로그아웃
+		public static function Logout():void{
+			var params:URLVariables=new URLVariables;
+			params.user_seq=Elever.UserInfo.user_seq;
+			params.gcm_id="";
+			Connection.post("eleverUserUpdateGCMIDAction.tiein",params,function(data:String):void{ });
+			
+			Account=null;
+			saveEnviroment();
+			
+			Main.setPage("eleverUserLoginPage",null,EleverPageEffect.RIGHT,EleverPageEffect.RIGHT);
+		}
+		
+		//원본 크기
+		public function get FullWidth():Number{ return stage.stageWidth/scaleX; }
+		public function get FullHeight():Number{ return stage.stageHeight/scaleY; }
+		
+		//로딩
+		[Embed(source = "assets/loading/loading.swf")]
+		private var LOADING_ANI:Class;
+		private var _loadingAni:MovieClip;
+		private var _loadingBG:Sprite;
+		private var _loading:Sprite;
+		public function set LoadingVisible(value:Boolean):void{ 
+			if(value && !_loading.visible) addChild(_loading); 
+			else if(!value && _loading.visible) removeChild(_loading);
+			
+			_loading.visible=value;
+		}
+		public function get LoadingVisible():Boolean{ return _loading.visible; }
+		
+		//상단 메뉴
+		private var _topMenu:TopMenuSprite;
+		private var _topMenuTween:Tween;
+		private var _topMenuVisible:Boolean;
+		public function get TopMenu():TopMenuSprite{ return _topMenu; }
+		public function set TopMenuVisible(value:Boolean):void{
+			_topMenu.cacheAsBitmap=true;
+			if(value){
+				if(!_topMenuVisible) _topMenu.y=-_topMenu.height;
+				_topMenu.visible=true;
+				_topMenuTween=new Tween(_topMenu.y,0,0,300,function(value:Number,isFinish:Boolean):void{
+					_topMenu.y=value;
+					if(isFinish){
+						_topMenu.cacheAsBitmap=false;
+						//calcPageSize();
+					}
+				});
+			}
+			else{
+				if(_topMenuVisible) _topMenu.y=0;
+				_topMenuTween=new Tween(_topMenu.y,-_topMenu.height,0,300,function(value:Number,isFinish:Boolean):void{
+					_topMenu.y=value;
+					if(isFinish){
+						_topMenu.visible=false;
+						//calcPageSize();
+						if(isFinish){
+							_topMenu.cacheAsBitmap=false;
+							_topMenu.clearAddedChild();
+						}
+					}
+				});
+			}
+			_topMenuVisible=value;
+			calcPageSize();
+		}
+		public function get TopMenuVisible():Boolean{ return _topMenuVisible; }
+		
+		//하단 메뉴
+		private var _bottomMenu:BottomMenuSprite;
+		private var _bottomMenuTween:Tween;
+		private var _bottomMenuVisible:Boolean;
+		public function get BottomMenu():BottomMenuSprite{ return _bottomMenu; }
+		public function set BottomMenuVisible(value:Boolean):void{ 	
+			_bottomMenu.cacheAsBitmap=true;		
+			if(value){
+				if(!_bottomMenuVisible) _bottomMenu.y=FullHeight;
+				_bottomMenu.visible=true;
+				_bottomMenuTween=new Tween(_bottomMenu.y,FullHeight-_bottomMenu.height,0,300,function(value:Number,isFinish:Boolean):void{
+					_bottomMenu.y=value;
+					if(isFinish){
+						_bottomMenu.cacheAsBitmap=false;
+						//calcPageSize();
+					}
+				});
+			}
+			else{
+				if(_bottomMenuVisible) _bottomMenu.y=FullHeight-_bottomMenu.height;
+				_bottomMenuTween=new Tween(_bottomMenu.y,FullHeight,0,300,function(value:Number,isFinish:Boolean):void{
+					_bottomMenu.y=value;
+					if(isFinish){
+						_bottomMenu.cacheAsBitmap=false;
+						_bottomMenu.visible=false;
+						//calcPageSize();
+					}
+				});
+			}
+			
+			_bottomMenuVisible=value;
+			calcPageSize();
+		}
+		public function get BottomMenuVisible():Boolean{ return _bottomMenuVisible; }
+		
+		
+		//배경
+		[Embed(source = "assets/bg.png")]
+		private var MAIN_BG:Class;		
+		private var _bg:Bitmap;
+		
+		
+		//페이지
+		private var _prevPageBitmapData:BitmapData;
+		private var _prevPageBitmap:Bitmap;
+		private var _prevPageBitmapTween:Tween;
+		private var _page:BasePage;
+		public function get Page():BasePage{ return _page; }
+		private var _pageBitmapData:BitmapData;
+		private var _pageBitmap:Bitmap;
+		private var _pageTween:Tween;
+		private var _pageY:Number;
+		private var _pageHeight:Number;
+		public function get PageWidth():Number{ return FullWidth; }
+		public function get PageHeight():Number{ return _pageHeight; }
+		private var _pageName:String;
+		public function get PageName():String{ return _pageName; }
+		private var _pageParams:Object;
+		public function get PageParameters():Object{ return _pageParams; }
+		
+		//팝업
+		private var _prevPopupBitmapData:BitmapData;
+		private var _prevPopupBitmap:Bitmap;
+		private var _prevPopupBitmapTween:Tween;
+		private var _popupBitmapData:BitmapData;
+		private var _popupBitmap:Bitmap;
+		
+		private var _popup:Sprite;
+		public function get Popup():Sprite{ return _popup; }
+		private var _popupBG:Sprite;
+		private var _popupAlphaTween:Tween;
+		private var _popupTween:Tween;
+		private var _popupList:Vector.<BasePopup>;
+		public function get PopupList():Vector.<BasePopup>{ return _popupList; }
+		
+		//생성자
+		public function Elever()
+		{
+			super();
+			
+			_bg=new MAIN_BG;
+			addChild(_bg);
+			
+			_eleverMain=this;
+			if(!_connection) _connection=new HTTPUtil(Config.SERVER_PATH);
+			loadEnviroment();
+			Page.Calendar.Index.loadEnviroment();
+			Page.Album.Index.loadEnviroment();
+			
+			stage.frameRate=30;
+			stage.color=0x000000;
+			stage.scaleMode = StageScaleMode.NO_SCALE;
+			stage.align = StageAlign.TOP_LEFT;
+			
+			if(Capabilities.cpuArchitecture == "ARM") {
+				NativeApplication.nativeApplication.addEventListener(Event.ACTIVATE, onActivate, false, 0, true);
+				NativeApplication.nativeApplication.addEventListener(Event.DEACTIVATE, onDeactivate, false, 0, true);
+			}
+			
+			_topMenu=new TopMenuSprite;
+			_topMenu.y=-_topMenu.height;
+			_topMenu.visible=false;
+			addChild(_topMenu);
+			_bottomMenu=new BottomMenuSprite;
+			_bottomMenu.y=FullHeight;
+			_bottomMenu.visible=false;
+			addChild(_bottomMenu);
+			_topMenuVisible=false;
+			_bottomMenuVisible=false;
+			
+			
+			_loading=new Sprite;
+			_loading.visible=false;
+			
+			_loadingBG=new Sprite;
+			_loadingBG.graphics.beginFill(0x000000,0.6);
+			_loadingBG.graphics.drawRect(0,0,100,100);
+			_loadingBG.graphics.endFill();
+			_loadingBG.cacheAsBitmap=true;
+			_loading.addChild(_loadingBG);
+			
+			_loadingAni=new LOADING_ANI;
+			_loading.addChild(_loadingAni);
+			
+			_popup=new Sprite;
+			_popup.visible=false;
+			addChild(_popup);
+			_popupBG=new Sprite;
+			_popup.addChild(_popupBG);
+			_popupBG.addEventListener(MouseEvent.CLICK,Popup_onClose);
+			_popupList=new Vector.<BasePopup>;
+			
+			setPage("eleverUserLoginPage",null,EleverPageEffect.NONE,EleverPageEffect.NONE);
+			
+			addEventListener(Event.ADDED_TO_STAGE,onAdded);
+			addEventListener(Event.REMOVED_FROM_STAGE,onRemoved);
+			
+			_pushService=new ApplePush;
+			//PushNotification.getInstance().sendLocalNotification("Start",0,"Elever");
+		}
+				
+		//페이지 이동
+		public function setPage(name:String,params:Object=null,fadein:String=EleverPageEffect.LEFT,fadeout:String=EleverPageEffect.LEFT):void{
+			if(_pageBitmap){
+				_pageBitmap.parent.removeChild(_pageBitmap);
+				_pageBitmap=null;
+			}
+			if(_pageBitmapData){
+				_pageBitmapData.dispose();
+				_pageBitmapData=null;
+			}
+			if(_pageTween){
+				_pageTween.endTween();
+				_pageTween=null;
+			}
+			if(_prevPageBitmap){
+				_prevPageBitmap.parent.removeChild(_prevPageBitmap);
+				_prevPageBitmap=null;
+			}
+			if(_prevPageBitmapData){
+				_prevPageBitmapData.dispose();
+				_prevPageBitmapData=null;
+			}
+			if(_prevPageBitmapTween){
+				_prevPageBitmapTween.endTween();
+				_prevPageBitmapTween=null;
+			}
+			
+			if(_pageName==name && _pageParams==params){
+				if(!_page.visible){
+					_page.cacheAsBitmap=false;
+					_page.x=0;
+					_page.visible=true;
+				}
+				
+				return;
+			}
+			
+			y=0;
+			
+			if(_page){				
+				if(fadeout!=EleverPageEffect.NONE){
+					_prevPageBitmapData=new BitmapData(PageWidth,PageHeight,true,0x00FFFFFF);
+					_prevPageBitmapData.draw(_page);
+					_prevPageBitmap=new Bitmap(_prevPageBitmapData);
+					_prevPageBitmap.cacheAsBitmap=true;
+					addChildAt(_prevPageBitmap,1);
+					var fadeoutCallbackX:Function=function(value:Number,isFinish:Boolean):void{
+						if(!_prevPageBitmap) return;
+						_prevPageBitmap.x=value;
+						if(isFinish){
+							_prevPageBitmap.parent.removeChild(_prevPageBitmap);
+							_prevPageBitmap=null;
+							
+							_prevPageBitmapData.dispose();
+							_prevPageBitmapData=null;
+							
+							_prevPageBitmapTween=null;
+						}
+					};
+					
+					_prevPageBitmap.y=_page.y;
+					if(fadeout==EleverPageEffect.RIGHT){
+						_prevPageBitmapTween=new Tween(0,PageWidth,0,300,fadeoutCallbackX);
+					}
+					else{
+						_prevPageBitmapTween=new Tween(0,-PageWidth,0,300,fadeoutCallbackX);
+					}
+				}
+				
+				removeChild(_page);
+				_page.dispose();
+				_page=null;
+			}
+			
+			var pageClass:Class=PageConnector.GetPageClass(name);
+			if(pageClass){
+				_pageName=name;
+				_pageParams=params;
+				
+				_page=new pageClass;
+				_page.y=_pageY;
+				
+				addChildAt(_page,1);
+				_page.onResize();
+				
+				if(fadein!=EleverPageEffect.NONE){
+					_page.cacheAsBitmap=true;
+					
+					_pageBitmapData=new BitmapData(PageWidth,PageHeight,true,0x00FFFFFF);
+					_pageBitmapData.draw(_page);
+					_pageBitmap=new Bitmap(_pageBitmapData);
+					_pageBitmap.cacheAsBitmap=true;
+					addChildAt(_pageBitmap,2);
+					
+					_page.visible=false;
+					
+					var fadeinCallbackX:Function=function(value:Number,isFinish:Boolean):void{
+						//_page.x=value;
+						if(!_pageBitmap) return;
+						_pageBitmap.x=value;
+						
+						if(isFinish){
+							if(_pageBitmap){
+								_pageBitmap.parent.removeChild(_pageBitmap);
+								_pageBitmap=null;
+							}
+							if(_pageBitmapData){
+								_pageBitmapData.dispose();
+								_pageBitmapData=null;
+							}
+							
+							_page.cacheAsBitmap=false;
+							_page.x=value;
+							_page.visible=true;
+							_pageTween=null;
+						}
+					};
+					
+					if(fadein==EleverPageEffect.RIGHT){
+						_pageBitmap.x=-PageWidth;
+						//_page.x=-PageWidth;
+						_pageTween=new Tween(-PageWidth,0,0,300,fadeinCallbackX);
+					}
+					else{			
+						_pageBitmap.x=PageWidth;
+						//_page.x=PageWidth;
+						_pageTween=new Tween(PageWidth,0,0,300,fadeinCallbackX);
+					}
+					//_pageBitmap.x=_page.x;
+					_pageBitmap.y=_page.y;
+				}
+			}
+		}
+		
+		public function invalidateAnimateBitmap():void{
+			if(_pageBitmapData){
+				_pageBitmapData.fillRect(new Rectangle(0,0,_pageBitmapData.width,_pageBitmapData.height),0x00000000);
+				_pageBitmapData.draw(_page);
+			}
+		}
+		
+		//팝업
+		public function showPopup(popup:BasePopup):void{
+			y=0;
+			
+			_popupList[_popupList.length]=popup;
+			
+			nextPopup();
+		}
+		
+		public function closePopup(cancel:Boolean=false):void{
+			var popup:BasePopup=_popupList[0];
+			
+			_popupList[0]=null;
+			_popupList.splice(0,1);
+			
+			if(_popupList.length==0){
+				if(_popupBitmap){
+					_popupBitmap.parent.removeChild(_popupBitmap);
+					_popupBitmap=null;
+				}
+				if(_popupBitmapData){
+					_popupBitmapData.dispose();
+					_popupBitmapData=null;
+				}
+				if(_prevPopupBitmap){
+					_prevPopupBitmap.parent.removeChild(_prevPopupBitmap);
+					_prevPopupBitmap=null;
+				}
+				if(_prevPopupBitmapData){
+					_prevPopupBitmapData.dispose();
+					_prevPopupBitmapData=null;
+				}
+				if(_prevPopupBitmapTween){
+					_prevPopupBitmapTween.endTween();
+					_prevPopupBitmapTween=null;
+				}
+			
+				if(popup.width>0 && popup.height>0){
+					_prevPopupBitmapData=new BitmapData(popup.width,popup.height,true,0x00FFFFFF);
+					_prevPopupBitmapData.draw(popup);
+					_prevPopupBitmap=new Bitmap(_prevPopupBitmapData);
+					_prevPopupBitmap.cacheAsBitmap=true;
+					_popup.addChild(_prevPopupBitmap);
+					_prevPopupBitmap.x=popup.x;
+					_prevPopupBitmap.y=popup.y;
+					
+					var fadeoutCallbackX:Function=function(value:Number,isFinish:Boolean):void{
+						if(!_prevPopupBitmap) return;
+						
+						_prevPopupBitmap.x=value;
+						
+						if(isFinish){
+							if(_prevPopupBitmap){
+								_prevPopupBitmap.parent.removeChild(_prevPopupBitmap);
+								_prevPopupBitmap=null;
+							}
+							if(_prevPopupBitmapData){
+								_prevPopupBitmapData.dispose();
+								_prevPopupBitmapData=null;
+							}
+							if(_prevPopupBitmapTween){
+								//_prevPopupBitmapTween.endTween();
+								_prevPopupBitmapTween=null;
+							}
+						}
+					};
+					
+					if(cancel==false){
+						_prevPopupBitmapTween=new Tween(_prevPopupBitmap.x,-PageWidth,0,300,fadeoutCallbackX);
+					}
+					else{
+						_prevPopupBitmapTween=new Tween(_prevPopupBitmap.x,PageWidth,0,300,fadeoutCallbackX);
+					}
+				}
+			}
+						
+			_popup.removeChild(popup);
+			popup.dispose();
+			popup=null;
+				
+			nextPopup();
+		}
+		
+		private function Popup_onClose(e:MouseEvent):void{
+			closePopup(true);
+		}
+		
+		private function nextPopup():void{
+			if(_popupList.length>0){				
+				if(!_popup.visible){
+					_popupBG.alpha=0;
+					
+					if(_popupAlphaTween) _popupAlphaTween.endTween();
+					_popupAlphaTween=new Tween(0,1,0,200,function(value:Number,isFinish:Boolean):void{
+						_popupBG.alpha=value;
+						if(isFinish){
+							//_popupAlphaTween.endTween();
+							_popupAlphaTween=null;
+						}
+					});
+				}
+				
+				
+				if(_popupTween) _popupTween.endTween();
+				_popup.addChild(_popupList[0]);
+				_popup.visible=true;
+				resizePopup();
+				
+				if(_popupBitmap){
+					_popupBitmap.parent.removeChild(_popupBitmap);
+					_popupBitmap=null;
+				}
+				if(_popupBitmapData){
+					_popupBitmapData.dispose();
+					_popupBitmapData=null;
+				}
+				
+				_popupBitmapData=new BitmapData(_popupList[0].width,_popupList[0].height,true,0x00FFFFFF);
+				_popupBitmapData.draw(_popupList[0]);
+				_popupBitmap=new Bitmap(_popupBitmapData);
+				_popupBitmap.cacheAsBitmap=true;
+				addChild(_popupBitmap);
+				
+				_popupList[0].visible=false;
+				_popupBitmap.x=PageWidth;
+				_popupBitmap.y=PageHeight/2-_popupBitmap.height/2;
+				_popupTween=new Tween(_popupBitmap.x,0,0,200,function(value:Number,isFinish:Boolean):void{
+					if(!_popupBitmap) return;
+					_popupBitmap.x=value;
+					
+					if(isFinish){
+						if(_popupBitmap){
+							_popupBitmap.parent.removeChild(_popupBitmap);
+							_popupBitmap=null;
+						}
+						if(_popupBitmapData){
+							_popupBitmapData.dispose();
+							_popupBitmapData=null;
+						}
+						
+						_popupList[0].x=0;
+						_popupList[0].y=PageHeight/2-_popupList[0].height/2;
+						_popupList[0].visible=true;
+						_popupList[0].onResize();
+						//_popupTween.endTween();
+						_popupTween=null;
+					}
+				});
+			}
+			else{
+				if(_popupAlphaTween) _popupAlphaTween.endTween();
+				_popupAlphaTween=new Tween(1,0,0,200,function(value:Number,isFinish:Boolean):void{
+					_popupBG.alpha=value;
+					if(isFinish){
+						_popup.visible=false;
+						//_popupAlphaTween.endTween();
+						_popupAlphaTween=null;
+					}
+				});
+			}
+		}
+		private function resizePopup():void{
+			if(_popup.visible){
+				_popupBG.graphics.clear();
+				_popupBG.graphics.beginFill(0x000000,0.6);
+				_popupBG.graphics.drawRect(0,0,FullWidth,FullHeight);
+				_popupBG.graphics.endFill();
+				
+				if(_popupList.length>0){
+					if(_popupList[0].parent){
+						_popupList[0].x=FullWidth/2-_popupList[0].width/2;
+						_popupList[0].y=FullHeight/2-_popupList[0].height/2;
+						_popupList[0].onResize();
+					}
+				}
+			}
+		}
+		
+		//페이지 크기 설정
+		private function calcPageSize():void{
+			if(_topMenu && _topMenuVisible) _pageY=_topMenu.height-7;
+			else _pageY=0;
+			
+			if(_bottomMenu && _bottomMenuVisible) _pageHeight=(FullHeight-_bottomMenu.height+2)-_pageY;
+			else _pageHeight=FullHeight-_pageY;
+			
+			if(_page){
+				_page.y=_pageY;
+				_page.onResize();
+			}
+			 
+		}
+		
+		//화면크기 재설정
+		public function onResize():void{
+			scaleX=stage.stageWidth/OriginalWidth;
+			scaleY=scaleX;
+			
+			_bg.width=FullWidth;
+			_bg.height=FullHeight;
+			
+			resizePopup();
+			
+			if(_topMenu) _topMenu.onResize();
+			if(_bottomMenu) _bottomMenu.onResize();
+			calcPageSize();
+			
+			_loadingBG.x=0;
+			_loadingBG.y=0;
+			_loadingBG.width=FullWidth;
+			_loadingBG.height=FullHeight;
+			_loadingAni.x=_loadingBG.width/2-_loadingAni.width/2;
+			_loadingAni.y=_loadingBG.height/2-_loadingAni.height/2;
+		}
+		
+		private function onAdded(e:Event):void{
+			onResize();
+			stage.addEventListener(Event.RESIZE, Stage_onResize);
+		}
+		private function onRemoved(e:Event):void{
+			stage.removeEventListener(Event.RESIZE, Stage_onResize);
+		}
+		
+		protected function Stage_onResize(e:Event):void{
+			onResize();
+		}
+		
+		private function onActivate(event:Event):void
+		{
+			stage.frameRate=30;
+			//NativeApplication.nativeApplication.systemIdleMode = SystemIdleMode.KEEP_AWAKE;
+			
+		}
+		
+		private function onDeactivate(event:Event):void
+		{
+			saveEnviroment();
+			Page.Calendar.Index.saveEnviroment();
+			Page.Album.Index.saveEnviroment();
+			stage.frameRate=0.01;
+			//NativeApplication.nativeApplication.exit();
+		}
+	}
+}

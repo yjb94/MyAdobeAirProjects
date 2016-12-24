@@ -1,0 +1,86 @@
+package Page.Chat
+{
+	import flash.display.Bitmap;
+	import flash.display.Loader;
+	import flash.display.Sprite;
+	import flash.events.Event;
+	import flash.events.MouseEvent;
+	import flash.net.URLRequest;
+	
+	import kr.pe.hs.ui.TabbedButton;
+	
+	public class EmoticonPreview extends Sprite
+	{
+		
+		[Embed(source = "assets/page/chat/emoticon/preview_bg.png")]
+		private static const EMOTICON_PREVIEW_BG:Class;
+		[Embed(source = "assets/page/chat/emoticon/preview_close.png")]
+		private static const EMOTICON_PREVIEW_CLOSE:Class;
+		
+		private var _bg:Bitmap;
+		private var _buttonClose:TabbedButton;
+		private var _loader:Loader;
+		public function get url():String{ 
+			if(_loader) return _loader.contentLoaderInfo.url;
+			return null;
+		}
+		
+		public function EmoticonPreview()
+		{
+			super();
+			
+			_bg=new EMOTICON_PREVIEW_BG; _bg.smoothing=true;
+			addChild(_bg);
+			
+			var bmpClose:Bitmap=new EMOTICON_PREVIEW_CLOSE; bmpClose.smoothing=true;
+			var bmpClose_on:Bitmap=new EMOTICON_PREVIEW_CLOSE; bmpClose_on.smoothing=true; bmpClose_on.alpha=0.4;
+			_buttonClose=new TabbedButton(bmpClose,bmpClose_on,bmpClose_on);
+			_buttonClose.addEventListener(MouseEvent.CLICK,close_onClick);
+			_buttonClose.x=_bg.x+_bg.width-_buttonClose.width-10;
+			_buttonClose.y=15;
+			addChild(_buttonClose);
+			
+			cacheAsBitmap=true;
+		}
+		
+		public function setURL(url:String):void{
+			if(_loader){
+				_loader.contentLoaderInfo.removeEventListener(Event.COMPLETE,onLoadComplete);
+				removeChild(_loader);
+				_loader.unload();
+				_loader=null;
+			}
+			if(url!=null){
+				_loader=new Loader;
+				_loader.load(new URLRequest(url));
+				_loader.contentLoaderInfo.addEventListener(Event.COMPLETE,onLoadComplete);
+				addChild(_loader);
+				visible=true;
+			}
+			else{
+				visible=false;
+			}
+			
+		}
+		
+		private function onLoadComplete(e:Event):void{
+			_loader.contentLoaderInfo.removeEventListener(Event.COMPLETE,onLoadComplete);
+			
+			var bmp:Bitmap=_loader.content as Bitmap;
+			bmp.smoothing=true;
+			
+			_loader.width=_bg.width-_buttonClose.width-20-10; //좌우 여백 20, 닫기버튼 좌측 여백 10
+			_loader.height=_bg.height-40; //상하 여백 20
+			if(_loader.scaleX<_loader.scaleY) 
+				_loader.scaleY=_loader.scaleX;
+			else
+				_loader.scaleX=_loader.scaleY;
+			_loader.x=_buttonClose.x-_loader.width-10;
+			_loader.y=20;
+		}
+		
+		private function close_onClick(e:MouseEvent):void{
+			setURL(null);
+		}
+	}
+}

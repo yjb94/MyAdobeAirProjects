@@ -1,0 +1,42 @@
+package Page.Home
+{
+	import flash.display.Sprite;
+	import flash.events.MouseEvent;
+	
+	import Page.BasePage;
+
+	public class Index extends BasePage
+	{
+		private var _logout:Sprite;
+		
+		public function Index()
+		{
+			super();
+			
+			Elever.Main.TopMenu.clearAddedChild();
+			Elever.Main.TopMenuVisible=true;
+			Elever.Main.BottomMenuVisible=true;
+			Elever.Main.BottomMenu.setCursor(BottomMenuSprite.CURSOR_HOME);
+			
+			_logout=new Sprite;
+			_logout.graphics.beginFill(0x000000,1.0);
+			_logout.graphics.drawRoundRect(0,0,250,250,50,50);
+			_logout.graphics.endFill();
+			_logout.buttonMode=true;
+			_logout.addEventListener(MouseEvent.CLICK,logout_onClick);
+			addChild(_logout);
+		}
+		
+		public override function onResize():void{
+			
+		}
+		
+		public override function dispose():void{
+			
+		}
+		
+		private function logout_onClick(e:MouseEvent):void{
+			Elever.Logout();
+		}
+	}
+}

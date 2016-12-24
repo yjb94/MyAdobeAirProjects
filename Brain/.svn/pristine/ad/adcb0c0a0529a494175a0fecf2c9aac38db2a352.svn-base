@@ -1,0 +1,184 @@
+package Page.Login
+{
+	import com.thanksmister.touchlist.controls.TouchList;
+	import com.thanksmister.touchlist.renderers.DisplayObjectItemRenderer;
+	import com.thanksmister.touchlist.renderers.SpaceItemRenderer;
+	
+	import flash.display.Bitmap;
+	import flash.display.SimpleButton;
+	import flash.display.Sprite;
+	import flash.events.Event;
+	import flash.events.MouseEvent;
+	import flash.text.AntiAliasType;
+	import flash.text.TextField;
+	import flash.text.TextFieldAutoSize;
+	import flash.text.TextFieldType;
+	import flash.text.TextFormat;
+	import flash.text.TextFormatAlign;
+	
+	import Page.BasePage;
+	
+	import kr.pe.hs.ui.TabbedButton;
+	
+	public class Join4 extends BasePage
+	{
+		[Embed(source = "assets/top_menu/button_prev.png")]
+		private const BUTTON_PREV:Class;
+		
+		[Embed(source = "assets/top_menu/button_next.png")]
+		private const BUTTON_NEXT:Class;
+		
+		[Embed(source = "assets/page/login/join4/title4.png")]
+		private const TITLE:Class;
+		
+		[Embed(source = "assets/page/login/join4/status4.png")]
+		private const STATUS:Class;
+		
+		[Embed(source = "assets/page/login/join4/join4_1.png")]
+		private const Join4_1:Class;
+		[Embed(source = "assets/page/login/join4/join4_2.png")]
+		private const Join4_2:Class;
+		[Embed(source = "assets/page/login/join4/join4_start.png")]
+		private const Join4_start:Class;
+		[Embed(source = "assets/page/login/join4/join4_start_on.png")]
+		private const Join4_start_on:Class;
+		
+		private var _listSprite:Vector.<Sprite>;
+		
+		private var _touchList:TouchList;
+		
+		public function Join4()
+		{
+			super();
+			
+			Elever.Main.TopMenu.clearAddedChild();
+			
+			var bmpTitle:Bitmap=new TITLE;
+			bmpTitle.smoothing=true;
+			Elever.Main.TopMenu.Title=bmpTitle;
+			
+			Elever.Main.TopMenu.LeftButton=new Sprite;
+			
+			var status:Bitmap=new STATUS;
+			status.smoothing=true;
+			status.y=Elever.Main.TopMenu.Background.height-7;
+			Elever.Main.TopMenu.addChild(status);
+			
+			var txt:TextField,txt2:TextField,fmt:TextFormat;
+			var btn:TabbedButton;
+			var bitmap:Bitmap;
+			
+			_listSprite=new Vector.<Sprite>(3,true);
+			_listSprite[0]=new Sprite;
+			
+			txt=new TextField;
+			txt.type=TextFieldType.DYNAMIC;
+			txt.selectable=false;
+			txt.width=0; txt.height=35; txt.x=0; txt.y=0;
+			fmt=txt.defaultTextFormat; fmt.size=txt.height/1.3; fmt.color=0x595959; fmt.align=TextFormatAlign.RIGHT; fmt.font="Main"; txt.defaultTextFormat=fmt;
+			txt.autoSize=TextFieldAutoSize.LEFT;
+			txt.antiAliasType=AntiAliasType.ADVANCED;
+			txt.embedFonts=true;
+			txt.text=Elever.UserInfo.user_nickname;
+			_listSprite[0].addChild(txt);
+			
+			var join4_1:Bitmap=new Join4_1;
+			join4_1.smoothing=true;
+			join4_1.x=txt.width+10;
+			join4_1.y=txt.y+5;
+			_listSprite[0].addChild(join4_1);
+			
+			txt2=new TextField;
+			txt2.type=TextFieldType.DYNAMIC;
+			txt2.selectable=false;
+			txt2.width=0; txt2.height=35; txt2.x=join4_1.x+join4_1.width+10; txt2.y=0;
+			fmt=txt2.defaultTextFormat; fmt.size=txt2.height/1.3; fmt.color=0x595959; fmt.align=TextFormatAlign.LEFT; fmt.font="Main"; txt2.defaultTextFormat=fmt;
+			txt2.autoSize=TextFieldAutoSize.LEFT;
+			txt2.antiAliasType=AntiAliasType.ADVANCED;
+			txt2.embedFonts=true;
+			txt2.text=Elever.UserInfo.couple_user_nickname;
+			_listSprite[0].addChild(txt2);
+			
+			/*txt.autoSize=TextFieldAutoSize.NONE;
+			txt2.autoSize=TextFieldAutoSize.NONE;
+			if(txt.width>txt2.width) txt2.width=txt.width;
+			else txt.width=txt2.width;*/
+			
+			
+			
+			_listSprite[1]=new Sprite;
+			var join4_2:Bitmap=new Join4_2;
+			join4_2.smoothing=true;
+			_listSprite[1].addChild(join4_2);			
+						
+			_listSprite[2]=new Sprite;
+			var join4_start:Bitmap=new Join4_start;
+			join4_start.smoothing=true;
+			var join4_start_on:Bitmap=new Join4_start_on;
+			join4_start_on.smoothing=true;
+			with(_listSprite[2]){
+				btn=new TabbedButton(join4_start,join4_start_on,join4_start_on);
+				btn.addEventListener(MouseEvent.CLICK,start_onClick);
+				addChild(btn);
+			}
+			
+			
+			
+			Elever.Main.TopMenuVisible=true;
+			Elever.Main.BottomMenuVisible=false;
+			
+			_touchList = new TouchList(Elever.Main.PageWidth,Elever.Main.PageHeight);
+			_touchList.addEventListener(Event.ADDED_TO_STAGE,touchList_onAdded);
+			addChild(_touchList);
+			
+			
+		}
+		
+		private function touchList_onAdded(e:Event):void{
+			_touchList.removeListItems();
+			_touchList.resize(Elever.Main.PageWidth-5,Elever.Main.PageHeight);
+			_touchList.addListItem(new SpaceItemRenderer(195));
+			for(var i:int = 0; i < _listSprite.length; i++) {
+				_listSprite[i].x=_touchList.width/2-_listSprite[i].width/2
+				_touchList.addListItem(new DisplayObjectItemRenderer(_listSprite[i]));
+				if(i==0) _touchList.addListItem(new SpaceItemRenderer(25));
+				else _touchList.addListItem(new SpaceItemRenderer(44));
+			}
+		}
+		
+		private function start_onClick(e:MouseEvent):void{			
+			Elever.Main.setPage("eleverStartPage");
+		}
+		
+		public override function dispose():void{
+			_touchList.removeListItems();
+			_touchList.removeEventListener(Event.ADDED_TO_STAGE,touchList_onAdded);
+			removeChild(_touchList);
+			_touchList=null;
+			
+			for(var i:int=0;i<_listSprite.length;i++){
+				while(_listSprite[i].numChildren>0){
+					if(_listSprite[i].getChildAt(0) is TextField){
+						var txt:TextField=_listSprite[i].getChildAt(0) as TextField;
+					}
+					else if(_listSprite[i].getChildAt(0) is SimpleButton){
+						var btn:SimpleButton=_listSprite[i].getChildAt(0) as SimpleButton;
+						btn.removeEventListener(MouseEvent.CLICK,start_onClick);
+					}
+					
+					_listSprite[i].removeChildAt(0);
+				}
+				if(_listSprite[i].parent)_listSprite[i].parent.removeChild(_listSprite[i]);
+				_listSprite[i]=null;
+			}
+			_listSprite.splice(0,_listSprite.length);
+			_listSprite=null;
+		}
+		
+		public override function onResize():void{
+			
+			_touchList.resize(Elever.Main.PageWidth-5,Elever.Main.PageHeight);
+			
+		}
+	}
+}

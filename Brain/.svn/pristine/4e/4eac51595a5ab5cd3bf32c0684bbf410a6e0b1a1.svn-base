@@ -1,0 +1,343 @@
+package Page.Calendar
+{
+	import com.thanksmister.touchlist.controls.TouchList;
+	import com.thanksmister.touchlist.renderers.DisplayObjectItemRenderer;
+	
+	import flash.display.Bitmap;
+	import flash.display.SimpleButton;
+	import flash.display.Sprite;
+	import flash.events.Event;
+	import flash.events.MouseEvent;
+	import flash.events.TransformGestureEvent;
+	import flash.net.URLVariables;
+	import flash.text.AntiAliasType;
+	import flash.text.TextField;
+	import flash.text.TextFieldAutoSize;
+	import flash.text.TextFormat;
+	import flash.ui.Multitouch;
+	import flash.ui.MultitouchInputMode;
+	
+	import Page.BasePage;
+	
+	public class ItemDetail extends BasePage
+	{
+		[Embed(source = "assets/top_menu/button_prev.png")]
+		private var BUTTON_PREV:Class;
+		[Embed(source = "assets/top_menu/button_prev_on.png")]
+		private var BUTTON_PREV_ON:Class;
+		
+		[Embed(source = "assets/top_menu/button_plus.png")]
+		private var BUTTON_PLUS:Class;
+		[Embed(source = "assets/top_menu/button_plus_on.png")]
+		private var BUTTON_PLUS_ON:Class;
+		
+		[Embed(source = "assets/page/calendar/item_detail/title.png")]
+		private var TITLE:Class;
+		
+		[Embed(source = "assets/page/calendar/item_detail/splitter.png")]
+		private var SPLITTER:Class;
+		
+		[Embed(source = "assets/page/calendar/item_detail/d_day.png")]
+		private var D_DAY:Class;
+		
+		[Embed(source = "assets/page/calendar/item_detail/list.png")]
+		private var LIST:Class;
+		
+		private var _status:Sprite;
+		
+		private var _listSprite:Vector.<Sprite>;
+		private var _touchList:TouchList;
+		
+		private var _currentPage:int=0;
+		private var _downloadList:Array;
+		private var _currentList:Array;
+		
+		public function ItemDetail()
+		{
+			super();
+			
+			Elever.Main.TopMenu.clearAddedChild();
+			Elever.Main.TopMenuVisible=true;
+			Elever.Main.BottomMenuVisible=true;
+			//Elever.Main.BottomMenu.setCursor(BottomMenuSprite.CURSOR_CALENDAR);
+			
+			var bmpTitle:Bitmap=new TITLE;
+			bmpTitle.smoothing=true;
+			Elever.Main.TopMenu.Title=bmpTitle;
+			
+			var buttonPrev:Bitmap=new BUTTON_PREV;
+			buttonPrev.smoothing=true;
+			var buttonPrevOn:Bitmap=new BUTTON_PREV_ON;
+			buttonPrevOn.smoothing=true;
+			Elever.Main.TopMenu.LeftButton=new SimpleButton(buttonPrev,buttonPrev,buttonPrevOn,buttonPrev);
+			Elever.Main.TopMenu.LeftButton.addEventListener(MouseEvent.CLICK,prev_onClick);
+			
+			var buttonPlus:Bitmap=new BUTTON_PLUS;
+			buttonPlus.smoothing=true;
+			var buttonPlusOn:Bitmap=new BUTTON_PLUS_ON;
+			buttonPlusOn.smoothing=true;
+			Elever.Main.TopMenu.RightButton=new SimpleButton(buttonPlus,buttonPlus,buttonPlusOn,buttonPlus);
+			Elever.Main.TopMenu.RightButton.addEventListener(MouseEvent.CLICK,plus_onClick);
+			
+			var ymd:String=Elever.Main.PageParameters.ymd;
+			var currentDate:Date=new Date(parseInt(ymd.substr(0,4)),parseInt(ymd.substr(4,2))-1,parseInt(ymd.substr(6,2)));
+			var dateArr:Array=[currentDate.fullYear.toString(),(currentDate.month+1).toString(),currentDate.date.toString()]
+			if(dateArr[1].length<2) dateArr[1]="0"+dateArr[1];
+			if(dateArr[2].length<2) dateArr[2]="0"+dateArr[2];
+			const dayOfWeekString:Vector.<String>=Vector.<String>(["SUN","MON","TUE","WED","THU","FRI","SAT"]);
+			var dateString:String=dateArr.join(". ")+" "+dayOfWeekString[currentDate.day];
+				
+			
+			_status=new Sprite;
+			addChild(_status);
+			
+			var bmpList:Bitmap=new LIST; bmpList.smoothing=true;
+			bmpList.x=31; bmpList.y=28;
+			_status.addChild(bmpList);
+			
+			var txtDate:TextField=new TextField;
+			var fmt:TextFormat=txtDate.defaultTextFormat;
+			fmt.color=0x595959;
+			fmt.font="Main";
+			fmt.size=22;
+			txtDate.defaultTextFormat=fmt;
+			txtDate.autoSize=TextFieldAutoSize.LEFT;
+			txtDate.selectable=false;
+			txtDate.embedFonts=true;
+			txtDate.antiAliasType=AntiAliasType.ADVANCED;
+			txtDate.text=dateString;
+			txtDate.x=bmpList.x+bmpList.width+13; txtDate.y=bmpList.y+bmpList.height/2-txtDate.height/2;
+			_status.addChild(txtDate);
+			
+			var txtD_Day:TextField=new TextField;
+			fmt=txtD_Day.defaultTextFormat;
+			fmt.color=0x595959;
+			fmt.font="Main";
+			fmt.size=22;
+			txtD_Day.defaultTextFormat=fmt;
+			txtD_Day.x=Elever.Main.PageWidth-30; txtD_Day.y=txtDate.y; txtD_Day.width=0; txtD_Day.height=0;
+			txtD_Day.autoSize=TextFieldAutoSize.RIGHT;
+			txtD_Day.selectable=false;
+			txtD_Day.embedFonts=true;
+			txtD_Day.antiAliasType=AntiAliasType.ADVANCED;
+			txtD_Day.text="D+32";
+			_status.addChild(txtD_Day);
+			
+			var bmpD_Day:Bitmap=new D_DAY; bmpD_Day.smoothing=true;
+			bmpD_Day.x=txtD_Day.x-13-bmpD_Day.width; bmpD_Day.y=txtD_Day.y+txtD_Day.height/2-bmpD_Day.height/2;
+			_status.addChild(bmpD_Day);
+			
+			var splitter:Bitmap=new SPLITTER; splitter.smoothing=true;
+			splitter.x=0; splitter.y=68;
+			_status.addChild(splitter);
+			
+			_status.graphics.beginFill(0xffffff,0.7);
+			_status.graphics.drawRect(0,0,540,68);
+			_status.graphics.endFill();
+			
+			
+			_listSprite=new Vector.<Sprite>;
+			_touchList = new TouchList(Elever.Main.PageWidth,Elever.Main.PageHeight-72);
+			_touchList.y=72;
+			_touchList.addEventListener(Event.ADDED_TO_STAGE,touchList_onAdded);
+			addChild(_touchList);
+			
+			Multitouch.inputMode=MultitouchInputMode.GESTURE;
+			addEventListener(TransformGestureEvent.GESTURE_SWIPE,onSwipeGesture);
+			
+			_currentList=new Array;
+			var list:Array=Index.CalendarListCache[ymd.substr(0,6)];
+			for(var i:int=0;i<list.length;i++){
+				var startDate:Date=new Date(parseInt(list[i].s_ymd.substr(0,4)),parseInt(list[i].s_ymd.substr(4,2))-1,parseInt(list[i].s_ymd.substr(6,2)));
+				var endDate:Date=new Date(parseInt(list[i].e_ymd.substr(0,4)),parseInt(list[i].e_ymd.substr(4,2))-1,parseInt(list[i].e_ymd.substr(6,2)));
+				if(startDate<=currentDate && currentDate<=endDate){
+					_currentList[_currentList.length]=list[i];
+				}
+			}
+			drawSchedules();
+			
+			loadSchedule();
+		}
+		
+		private function touchList_onAdded(e:Event=null):void{
+			_touchList.removeListItems();
+			onResize();
+			for(var i:int = 0; i < _listSprite.length; i++) {
+				_listSprite[i].x=_touchList.width/2-_listSprite[i].width/2
+				_touchList.addListItem(new DisplayObjectItemRenderer(_listSprite[i]));
+			}
+		}
+		
+		
+		public override function onResize():void{			
+			_touchList.y=72;
+			_touchList.resize(Elever.Main.PageWidth,Elever.Main.PageHeight-72);
+		}
+		
+		public override function dispose():void{
+			Elever.Main.TopMenu.LeftButton.removeEventListener(MouseEvent.CLICK,prev_onClick);
+			Elever.Main.TopMenu.RightButton.removeEventListener(MouseEvent.CLICK,plus_onClick);
+			
+			Multitouch.inputMode=MultitouchInputMode.NONE;
+			removeEventListener(TransformGestureEvent.GESTURE_SWIPE,onSwipeGesture);
+						
+			_touchList.removeListItems();
+			_touchList.removeEventListener(Event.ADDED_TO_STAGE,touchList_onAdded);
+			removeChild(_touchList);
+			_touchList=null;
+						
+			for(var i:int=0;i<_listSprite.length;i++){
+				while(_listSprite[i].numChildren>0) _listSprite[i].removeChildAt(0);
+				if(_listSprite[i].parent) _listSprite[i].parent.removeChild(_listSprite[i]);
+				_listSprite[i]=null;
+			}
+			_listSprite.splice(0,_listSprite.length);
+			_listSprite=null;
+		}
+		
+		private function onSwipeGesture(e:TransformGestureEvent):void{
+			var ymd:String=Elever.Main.PageParameters.ymd;
+			var currentDate:Date=new Date(parseInt(ymd.substr(0,4)),parseInt(ymd.substr(4,2))-1,parseInt(ymd.substr(6,2)));
+			
+			var isChanged:Boolean=false;
+			if(e.offsetX>0){
+				currentDate.date--;
+				
+				ymd=currentDate.fullYear.toString();
+				if(currentDate.month+1<10) ymd+="0";
+				ymd+=(currentDate.month+1).toString();
+				if(currentDate.date<10) ymd+="0";
+				ymd+=(currentDate.date).toString();
+				
+				Elever.Main.setPage("eleverCalendarSchedulePage",{ymd:ymd},EleverPageEffect.RIGHT,EleverPageEffect.RIGHT);
+			}
+			else if(e.offsetX<0){
+				currentDate.date++;
+				
+				ymd=currentDate.fullYear.toString();
+				if(currentDate.month+1<10) ymd+="0";
+				ymd+=(currentDate.month+1).toString();
+				if(currentDate.date<10) ymd+="0";
+				ymd+=(currentDate.date).toString();
+				
+				Elever.Main.setPage("eleverCalendarSchedulePage",{ymd:ymd},EleverPageEffect.LEFT,EleverPageEffect.LEFT);
+			}
+			
+		}
+		
+		private function prev_onClick(e:MouseEvent):void{
+			var ym:String=Elever.Main.PageParameters.ymd.substr(0,6);
+			
+			Elever.Main.setPage("eleverCalendarPage",{ym:ym},EleverPageEffect.RIGHT,EleverPageEffect.RIGHT);
+		}
+		
+		private function plus_onClick(e:MouseEvent):void{
+			Elever.Main.setPage("eleverCalendarScheduleRegPage",{ymd:Elever.Main.PageParameters.ymd});
+		}
+		
+		private function loadSchedule(page:int=0):void{
+			//Elever.Main.LoadingVisible=true;
+			var params:URLVariables=new URLVariables;
+			
+			params.user_seq=Elever.UserInfo.user_seq;
+			params.room_seq=Elever.UserInfo.room_seq;
+			
+			params.ymd=Elever.Main.PageParameters.ymd;
+			params.page_no=page;
+			_currentPage=page;
+			
+			Elever.Connection.post("eleverCalendarScheduleSeleteListAction.tiein",params,onLoadComplete);
+		}
+		
+		private function onLoadComplete(data:String):void{
+			//Elever.Main.LoadingVisible=false;
+			
+			if(data){
+				var result:Object=JSON.parse(data);
+				
+				if(result.j_errorMsg.length>0){
+					new Alert(result.j_errorMsg).show();
+					return;
+				}
+				
+				var urlParams:URLVariables=Elever.Connection.CurrentParameters;
+				
+				if(result.j_page_no==0){
+					_downloadList=new Array;
+				}
+				
+				var list:Array=result.j_list;
+				for(var i:int=0;i<list.length;i++){ 
+					_downloadList[_downloadList.length]=list[i];
+				}
+				
+				if(list.length==10){
+					loadSchedule(_currentPage+1);
+				}
+				else{
+					_currentList=_downloadList;
+					drawSchedules();
+				}
+			}
+		}
+		
+		private function drawSchedules():void{
+			if(_touchList==null) return;
+			
+			var i:int;
+			_touchList.removeListItems();
+			for(i=0;i<_listSprite.length;i++){
+				while(_listSprite[i].numChildren>0) _listSprite[i].removeChildAt(0);
+				if(_listSprite[i].parent) _listSprite[i].parent.removeChild(_listSprite[i]);
+				_listSprite[i]=null;
+			}
+			_listSprite.splice(0,_listSprite.length);
+			
+			var list:Array=_currentList;
+			for(i=0;i<list.length;i++){
+				if(list[i].calendar_type=="01"){
+					var sprite:Sprite=new Sprite;
+					
+					var txt:TextField=new TextField;
+					var fmt:TextFormat=txt.defaultTextFormat;
+					fmt.color=0x595959;
+					fmt.font="Main";
+					fmt.size=22;
+					txt.defaultTextFormat=fmt;
+					txt.autoSize=TextFieldAutoSize.LEFT;
+					txt.multiline=true;
+					txt.wordWrap=true;
+					txt.selectable=false;
+					txt.embedFonts=true;
+					txt.antiAliasType=AntiAliasType.ADVANCED;
+					txt.x=96; txt.y=30; txt.width=415; txt.height=0;
+					txt.text=list[i].calendar_content;
+					sprite.addChild(txt);
+					
+					if(list[i].s_ymd==list[i].e_ymd){
+						var sticker:Bitmap=new StickerPicker.Stickers[list[i].item_seq];
+						sticker.smoothing=true;
+						sticker.x=20;
+						sticker.y=txt.y+txt.height/2-sticker.height/2;
+						sprite.addChild(sticker);
+					}
+					else{
+						
+					}
+					
+					var splitter:Bitmap=new SPLITTER; splitter.smoothing=true;
+					splitter.x=0; splitter.y=Math.floor(txt.y+txt.height+30);
+					sprite.addChild(splitter);
+					
+					sprite.graphics.beginFill(0xFFFFFF,0.7);
+					sprite.graphics.drawRect(0,0,540,splitter.y);
+					sprite.graphics.endFill();
+					
+					_listSprite[_listSprite.length]=sprite;
+				}
+			}
+			
+			if(_touchList.parent) touchList_onAdded();
+		}
+	}
+}

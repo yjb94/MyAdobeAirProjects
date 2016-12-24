@@ -1,0 +1,125 @@
+package
+{
+	import flash.display.Bitmap;
+	import flash.display.Sprite;
+	import flash.events.MouseEvent;
+	
+	import kr.pe.hs.ui.TabbedButton;
+		
+	public class BottomMenuSprite extends Sprite
+	{
+		[Embed(source = "assets/bottom_menu/bg.png")]
+		private var BOTTOM_MENU_BG:Class;
+		
+		[Embed(source = "assets/bottom_menu/btn1_normal.png")]
+		private var BTN1_NORMAL:Class;
+		[Embed(source = "assets/bottom_menu/btn1_down.png")]
+		private var BTN1_DOWN:Class;
+		
+		[Embed(source = "assets/bottom_menu/btn2_normal.png")]
+		private var BTN2_NORMAL:Class;
+		[Embed(source = "assets/bottom_menu/btn2_down.png")]
+		private var BTN2_DOWN:Class;
+		
+		[Embed(source = "assets/bottom_menu/btn3_normal.png")]
+		private var BTN3_NORMAL:Class;
+		[Embed(source = "assets/bottom_menu/btn3_down.png")]
+		private var BTN3_DOWN:Class;
+		
+		[Embed(source = "assets/bottom_menu/btn4_normal.png")]
+		private var BTN4_NORMAL:Class;
+		[Embed(source = "assets/bottom_menu/btn4_down.png")]
+		private var BTN4_DOWN:Class;
+		
+		[Embed(source = "assets/bottom_menu/btn5_normal.png")]
+		private var BTN5_NORMAL:Class;
+		[Embed(source = "assets/bottom_menu/btn5_down.png")]
+		private var BTN5_DOWN:Class;
+		
+		[Embed(source = "assets/bottom_menu/btn_tabbed.png")]
+		private var BTN_TABBED:Class;
+		
+		private var _bg:Bitmap;
+		
+		private var _tabbedIndex:int;
+		public function get TabbedIndex():int{ return _tabbedIndex; }
+		private var _tabbed:Bitmap;
+		
+		private var _tabList:Vector.<TabbedButton>;
+		
+		public static const CURSOR_HOME:int=0;
+		public static const CURSOR_ALBUM:int=1;
+		public static const CURSOR_MESSANGER:int=2;		
+		public static const CURSOR_CALENDAR:int=3;
+		public static const CURSOR_MORE:int=4;
+		
+		public function BottomMenuSprite()
+		{
+			super();
+			
+			_bg=new BOTTOM_MENU_BG;
+			_bg.smoothing=true;
+			addChild(_bg);
+			
+			_tabbed=new BTN_TABBED;
+			_tabbed.y=2;
+			_tabbed.smoothing=true;
+			addChild(_tabbed);
+			
+			_tabList=new Vector.<TabbedButton>(5,true);
+			var btn_normal:Vector.<Bitmap>=Vector.<Bitmap>([new BTN1_NORMAL,new BTN2_NORMAL,new BTN3_NORMAL,new BTN4_NORMAL,new BTN5_NORMAL]);
+			var btn_down:Vector.<Bitmap>=Vector.<Bitmap>([new BTN1_DOWN,new BTN2_DOWN,new BTN3_DOWN,new BTN4_DOWN,new BTN5_DOWN]);
+			for(var i:int=0;i<5;i++){
+				btn_normal[i].smoothing=true;
+				btn_down[i].smoothing=true;
+				_tabList[i]=new TabbedButton(btn_normal[i],null,btn_down[i]);
+				_tabList[i].addEventListener(MouseEvent.CLICK,tabList_onClick);
+				addChild(_tabList[i]);
+			}
+			
+			setCursor(0);
+		}
+		
+		private function tabList_onClick(e:MouseEvent):void{			
+			setCursor(_tabList.indexOf(e.currentTarget));
+			
+			if(_tabbedIndex==CURSOR_HOME) Elever.Main.setPage("eleverStartPage");
+			else if(_tabbedIndex==CURSOR_ALBUM) Elever.Main.setPage("eleverAlbumPage"); 
+			else if(_tabbedIndex==CURSOR_MESSANGER);
+			else if(_tabbedIndex==CURSOR_CALENDAR) Elever.Main.setPage("eleverCalendarPage");
+			else if(_tabbedIndex==CURSOR_MORE);
+			
+		}
+		
+		public function setCursor(value:int):void{
+			_tabList[_tabbedIndex].isTabbed=false;
+			_tabbedIndex=value;
+			_tabbed.x=_tabList[_tabbedIndex].x+_tabList[_tabbedIndex].width/2-_tabbed.width/2;
+			_tabbed.y=2;
+			_tabList[_tabbedIndex].isTabbed=true;
+		}
+		
+		public function onResize():void{		
+			_bg.width=Elever.Main.FullWidth;
+			//_bg.scaleY=_bg.scaleX;
+			
+			_tabbed.width=_bg.width/5;
+			_tabbed.y=2*_bg.scaleY;
+			_tabbed.height=_bg.height-_tabbed.y;
+			setCursor(_tabbedIndex);
+			
+			var tabWidth:Number=0,i:int,i_len:int;
+			i_len=_tabList.length;
+			for(i=0;i<i_len;i++){
+				tabWidth+=_tabList[i].width;
+			}
+			var tabMargin:Number=(_bg.width-tabWidth)/(i_len+1);
+			for(i=0;i<i_len;i++){
+				if(i==0) _tabList[i].x=tabMargin;
+				else _tabList[i].x=_tabList[i-1].x+_tabList[i-1].width+tabMargin;
+				
+				_tabList[i].y=_bg.height/2-_tabList[i].height/2;
+			}
+		}
+	}
+}

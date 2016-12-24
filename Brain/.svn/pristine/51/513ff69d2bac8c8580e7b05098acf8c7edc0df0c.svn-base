@@ -1,0 +1,35 @@
+package
+{
+	import Page.Album.Index;
+	import Page.Calendar.Add;
+	import Page.Calendar.Index;
+	import Page.Calendar.ItemDetail;
+	import Page.Chat.Index;
+	import Page.Home.Index;
+	import Page.Login.Index;
+
+	public class PageConnector
+	{
+		private static const PageClass:Object={
+			"eleverUserLoginPage":Page.Login.Index,
+			"eleverUserRegPage":Page.Login.Join1,
+			"eleverUserPhNoPage":Page.Login.Join2,
+			"eleverCoupleCheck":Page.Login.Join3,
+			"eleverWelcomePage":Page.Login.Join4,
+			"eleverStartPage":Page.Home.Index,
+			"eleverCalendarPage":Page.Calendar.Index,
+			"eleverCalendarScheduleRegPage":Page.Calendar.Add,
+			"eleverCalendarSchedulePage":Page.Calendar.ItemDetail,
+			"eleverChatPage":Page.Chat.Index,
+			"eleverAlbumPage":Page.Album.Index
+		};
+		
+		public function PageConnector()
+		{
+		}
+		
+		public static function GetPageClass(name:String):Class{
+			return PageClass[name];
+		}
+	}
+}

@@ -1,0 +1,7 @@
+package
+{
+	public class Config
+	{
+		public static const SERVER_PATH:String="http://176.34.44.143/";
+	}
+}

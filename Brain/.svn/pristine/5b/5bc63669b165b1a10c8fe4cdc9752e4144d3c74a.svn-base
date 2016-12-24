@@ -1,0 +1,234 @@
+package Page.More.Setting
+{	
+	import com.thanksmister.touchlist.controls.TouchList;
+	import com.thanksmister.touchlist.renderers.DisplayObjectItemRenderer;	
+	
+	import flash.display.Bitmap;
+	import flash.display.SimpleButton;
+	import flash.display.Sprite;
+	import flash.events.MouseEvent;
+	import flash.events.Event;
+	import flash.filesystem.File;
+	import flash.filesystem.FileMode;
+	import flash.filesystem.FileStream;
+	import flash.geom.Point;
+	
+	import Page.BasePage;
+	
+	public class ImgQuality extends BasePage
+	{
+		[Embed(source = "assets/top_menu/button_prev.png")]
+		private var BUTTON_PREV:Class;
+		[Embed(source = "assets/top_menu/button_prev_on.png")]
+		private var BUTTON_PREV_ON:Class;
+		
+		[Embed(source = "assets/top_menu/button_check.png")]
+		private var BUTTON_CHECK:Class;
+		[Embed(source = "assets/top_menu/button_check_on.png")]
+		private var BUTTON_CHECK_ON:Class;
+		
+		[Embed(source = "assets/page/more/setting/index/title.png")]
+		private var TITLE:Class;
+		
+		[Embed(source = "assets/page/more/setting/ImgQuality/bg.png")]
+		private var BG:Class;
+		private var _bmp_bg:Bitmap;
+		
+		[Embed(source = "assets/page/more/setting/button_circle.png")]
+		private var BUTTON_CIRCLE:Class;
+		[Embed(source = "assets/page/more/setting/button_circle_on.png")]
+		private var BUTTON_CIRCLE_ON:Class;
+		private var _bmp_button_list:Vector.<Bitmap>;
+		private var _bmp_sel_quality:Bitmap;
+		private static var _sel_quality:int;
+		private var _prev_sel_quality:int;
+		
+		private var _is_sel_change:Boolean;
+		
+		private var _listSprite:Vector.<Sprite>;
+		private var _touchList:TouchList;
+		private var _dialogHeight:Number;
+		private var _downPoint:Point;
+		
+		public static function loadEnviroment():void
+		{
+			//return;
+			var appStorage:File=File.applicationStorageDirectory;
+			var dbFile:File = appStorage.resolvePath("ImageQuality.db");
+			if(dbFile.exists)
+			{
+				var fs:FileStream=new FileStream;
+				fs.open(dbFile,FileMode.READ);
+				var result:Object=JSON.parse(fs.readUTF());
+				fs.close();
+				
+				_sel_quality = int(result);
+			}
+		}
+		
+		public static function saveEnviroment():void
+		{
+			var appStorage:File = File.applicationStorageDirectory;
+			var dbFile:File = appStorage.resolvePath("ImageQuality.db");
+			var fs:FileStream=new FileStream;
+			fs.open(dbFile,FileMode.WRITE);
+			fs.writeUTF(JSON.stringify(_sel_quality));
+			fs.close();
+		}
+		
+		public function ImgQuality()
+		{
+			super();
+			_dialogHeight = 0;
+			_downPoint=new Point;
+			loadEnviroment();
+			
+			this.addEventListener(MouseEvent.CLICK, onTouch);
+			this.addEventListener(MouseEvent.MOUSE_DOWN, onMouseDown);
+			
+			//top menu
+			Elever.Main.TopMenu.clearAddedChild();
+			Elever.Main.TopMenuVisible=true;
+			
+			var bmpTitle:Bitmap=new TITLE;
+			bmpTitle.smoothing=true;
+			Elever.Main.TopMenu.Title=bmpTitle;
+			
+			var buttonPrev:Bitmap=new BUTTON_PREV;
+			buttonPrev.smoothing=true;
+			var buttonPrevOn:Bitmap=new BUTTON_PREV_ON;
+			buttonPrevOn.smoothing=true;
+			Elever.Main.TopMenu.LeftButton=new SimpleButton(buttonPrev,buttonPrev,buttonPrevOn,buttonPrev);
+			Elever.Main.TopMenu.LeftButton.addEventListener(MouseEvent.CLICK,prev_onClick);
+			
+			var buttonCheck:Bitmap=new BUTTON_CHECK;
+			buttonCheck.smoothing=true;
+			var buttonCheckOn:Bitmap=new BUTTON_CHECK_ON;
+			buttonCheckOn.smoothing=true;
+			Elever.Main.TopMenu.RightButton=new SimpleButton(buttonCheck,buttonCheck,buttonCheckOn,buttonCheck);
+			Elever.Main.TopMenu.RightButton.alpha=0.2;
+			Elever.Main.TopMenu.RightButton.addEventListener(MouseEvent.CLICK,submit_onClick);
+			
+			//bottom menu
+			Elever.Main.BottomMenuVisible=true;
+			Elever.Main.BottomMenu.setCursor(BottomMenuSprite.CURSOR_MORE);
+			
+			
+			_listSprite = new Vector.<Sprite>(1, true);
+			
+			_listSprite[0] = new Sprite;
+			_listSprite[0].graphics.beginFill(0x000000,0);
+			_listSprite[0].graphics.drawRect(0,0,485,1);
+			_listSprite[0].graphics.endFill();
+			
+			//bg
+			_bmp_bg = new BG;
+			_bmp_bg.smoothing = true;
+			_bmp_bg.x = 27;
+			_bmp_bg.y = 129-75;
+			_listSprite[0].addChild(_bmp_bg);
+			
+			_bmp_button_list = new Vector.<Bitmap>;
+			//여기서 3은 index length
+			for(var i:int = 0; i < 3; i++)
+			{
+				var bmp:Bitmap = new BUTTON_CIRCLE;
+				bmp.smoothing = true;
+				bmp.x = 436;
+				bmp.y = 207+75*i-75;
+				_bmp_button_list.push(bmp);
+				_listSprite[0].addChild(_bmp_button_list[i]);
+			}
+			//이 코드 나중에 원래 어떤거 선택하고 있었는지로 바꿔야됨.
+			_prev_sel_quality = _sel_quality;
+			_is_sel_change = false;
+			
+			_bmp_button_list[_sel_quality].visible = false;
+			_bmp_sel_quality = new BUTTON_CIRCLE_ON;
+			_bmp_sel_quality.smoothing = true;
+			_bmp_sel_quality.x = _bmp_button_list[_sel_quality].x;
+			_bmp_sel_quality.y = _bmp_button_list[_sel_quality].y;
+			_listSprite[0].addChild(_bmp_sel_quality);
+			
+			_touchList=new TouchList(Elever.Main.PageWidth,Elever.Main.PageHeight);
+			_touchList.addEventListener(Event.ADDED_TO_STAGE,touchList_onAdded);
+			addChild(_touchList);
+		}
+		
+		private function touchList_onAdded(e:Event=null):void
+		{
+			_touchList.removeListItems();
+			onResize();
+			for(var i:int = 0; i < _listSprite.length; i++) 
+			{
+				//_listSprite[i].x=_touchList.width/2-_listSprite[i].width/2
+				_touchList.addListItem(new DisplayObjectItemRenderer(_listSprite[i]));
+			}
+		}
+		
+		private function onMouseDown(e:MouseEvent):void
+		{
+			_downPoint.x=this.mouseX;
+			_downPoint.y=this.mouseY;
+		}
+		private function onTouch(e:MouseEvent):void
+		{
+			if(Math.abs(_downPoint.y-this.mouseY) >= 10)
+				return;
+			
+			if(!_is_sel_change)
+			{
+				_is_sel_change = true;
+				Elever.Main.TopMenu.RightButton.alpha = 1.0;
+			}
+			
+			if(this.mouseY >= 176-75 && this.mouseY <= 252-75)
+				_sel_quality = 0;
+			else if(this.mouseY >= 252-75 && this.mouseY <= 327-75)
+				_sel_quality = 1;
+			else if(this.mouseY >= 327-75 && this.mouseY <= 405-75)
+				_sel_quality = 2;
+			changeSelectedQuality();
+		}
+		
+		private function changeSelectedQuality():void
+		{	
+			_listSprite[0].removeChild(_bmp_sel_quality);
+			
+			_bmp_button_list[_sel_quality].visible = false;
+			_bmp_button_list[_prev_sel_quality].visible = true;
+			_bmp_sel_quality = new BUTTON_CIRCLE_ON;
+			_bmp_sel_quality.smoothing = true;
+			_bmp_sel_quality.x = _bmp_button_list[_sel_quality].x;
+			_bmp_sel_quality.y = _bmp_button_list[_sel_quality].y;
+			_listSprite[0].addChild(_bmp_sel_quality);
+			
+			_prev_sel_quality = _sel_quality;
+		}
+		
+		private function prev_onClick(e:MouseEvent):void
+		{
+			Elever.Main.setPage("eleverMoreSettingPage",null,EleverPageEffect.RIGHT,EleverPageEffect.RIGHT);
+		}
+		
+		private function submit_onClick(e:MouseEvent):void
+		{
+			//데이터 바꿔주는 코드.
+			if(Elever.Main.TopMenu.RightButton.alpha == 1.0)
+			{
+				saveEnviroment();
+				Elever.Main.setPage("eleverMoreSettingPage",null,EleverPageEffect.RIGHT,EleverPageEffect.RIGHT);
+			}
+		}
+		
+		public override function onResize():void
+		{
+			_touchList.resize(Elever.Main.PageWidth,Elever.Main.PageHeight-_dialogHeight);	
+		}
+		
+		public override function dispose():void{
+			
+		}
+	}
+}
+

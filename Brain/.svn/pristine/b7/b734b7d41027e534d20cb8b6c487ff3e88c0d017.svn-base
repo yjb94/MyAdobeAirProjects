@@ -1,0 +1,477 @@
+package Page.Chat
+{
+	import flash.display.Bitmap;
+	import flash.display.DisplayObject;
+	import flash.display.Loader;
+	import flash.display.LoaderInfo;
+	import flash.display.Sprite;
+	import flash.events.Event;
+	import flash.events.MouseEvent;
+	import flash.filesystem.File;
+	import flash.geom.Point;
+	import flash.net.URLRequest;
+	import flash.utils.Dictionary;
+	
+	import kr.pe.hs.tween.Tween;
+	import kr.pe.hs.ui.TabbedButton;
+	
+	public class EmoticonPicker extends Sprite
+	{		
+		[Embed(source = "assets/page/chat/emoticon/bg.png")]
+		private static const BG:Class;
+		
+		[Embed(source = "assets/page/chat/emoticon/tab_current.png")]
+		private static const TAB_CURRENT:Class;
+		
+		[Embed(source = "assets/page/chat/emoticon/dot.png")]
+		private static const PAGE_DOT:Class;
+		[Embed(source = "assets/page/chat/emoticon/dot_on.png")]
+		private static const PAGE_DOT_ON:Class;
+		
+		[Embed(source = "assets/page/chat/emoticon/backspace.png")]
+		private static const BACKSPACE:Class;
+		
+		private static const EMOTICON_PATH:String="data/emoticons/";
+		private static var _currentEmoticons:Vector.<String>=Vector.<String>([ ]);
+		
+		private var _this:EmoticonPicker;
+		
+		private var _onSelectCallback:Function;
+				
+		private var _bg:Bitmap;
+		
+		private var _tabEmoticons:Vector.<Vector.<String>>;
+		private var _tabs:Vector.<TabbedButton>;
+		private var _emoticonsData:Dictionary;
+		
+		private var _currentTab:int;
+		private var _currentPage:int;
+		
+		private var _iconCol:int;
+		private var _iconRow:int;
+		private var _iconCount:int;
+		private var _iconX:Number;
+		private var _iconY:Number;
+		private var _iconWidth:Number;
+		private var _iconHeight:Number;
+		
+		private var _iconIDs:Vector.<String>;
+		private var _pageDot:Sprite;
+		private var _page:Sprite;
+		private var _nextPage:Sprite;
+		private var _prevPage:Sprite;
+		private var _pageMoveTween:Tween;
+		
+		private var _isDrag:Boolean;
+		private var _dragStart:Point;
+		private var _dragCurrent:Point;
+		private var _dragMovement:Point;
+		
+		public function EmoticonPicker(onSelect:Function)
+		{
+			_this=this;
+			super();
+			
+			_onSelectCallback=onSelect;
+			
+			var i:int,j:int;
+			
+			_bg=new BG; _bg.smoothing=true;
+			addChild(_bg);
+			
+			_pageDot=new Sprite;
+			addChild(_pageDot);
+			
+			_iconIDs=new Vector.<String>;
+			_page=new Sprite;
+			_page.y=58;
+			//_page.cacheAsBitmap=true;
+			addChild(_page);
+			
+			_prevPage=new Sprite;
+			_prevPage.y=_page.y;
+			//_prevPage.cacheAsBitmap=true;
+			addChild(_prevPage);
+			
+			_nextPage=new Sprite;
+			_nextPage.y=_page.y;
+			//_nextPage.cacheAsBitmap=true;
+			addChild(_nextPage);
+			
+			
+			_emoticonsData=new Dictionary;
+			
+			_tabEmoticons=new Vector.<Vector.<String>>;
+			
+			_tabs=new Vector.<TabbedButton>;
+			var bmpCurrent:Bitmap=new TAB_CURRENT; bmpCurrent.smoothing=true; bmpCurrent.alpha=0.4;
+			var bmpCurrent_on:Bitmap=new TAB_CURRENT; bmpCurrent_on.smoothing=true;
+			_tabs[0]=new TabbedButton(bmpCurrent,bmpCurrent_on,bmpCurrent_on);
+			_tabs[0].addEventListener(MouseEvent.CLICK,onTabbed);
+			
+			_tabEmoticons[0]=new Vector.<String>;
+			
+			var dir:File=File.applicationDirectory.resolvePath(EMOTICON_PATH);
+			var emoticon_tabs:Array=dir.getDirectoryListing();
+			
+			for(i=0;i<emoticon_tabs.length;i++){
+				if(emoticon_tabs[i].isDirectory){
+					var loader:Loader=new Loader;
+					
+					loader.load(new URLRequest(emoticon_tabs[i].url+".png"));
+					loader.contentLoaderInfo.addEventListener(Event.COMPLETE,onTabLoadComplete);
+					
+					var tab:TabbedButton=new TabbedButton(loader);
+					tab.addEventListener(MouseEvent.CLICK,onTabbed);
+					
+					var sub:Array=emoticon_tabs[i].getDirectoryListing();
+					var emoticons:Vector.<String>=new Vector.<String>;
+					for(j=0;j<sub.length;j++){
+						if(!sub[j].isDirectory){
+							emoticons[emoticons.length]=sub[j].url;
+						}
+					}
+					
+					_tabEmoticons[_tabEmoticons.length]=emoticons;
+					_tabs[_tabs.length]=tab;
+				}
+			}
+			onResize();
+			
+			_currentTab=-1;
+			setTab(0);
+			
+			_isDrag=false;
+			_dragStart=new Point;
+			_dragCurrent=new Point;
+			_dragMovement=new Point;
+			
+			addEventListener(MouseEvent.MOUSE_DOWN,onMouseDown);
+		}
+		
+		private function onTabLoadComplete(e:Event):void{
+			var loaderInfo:LoaderInfo=e.currentTarget as LoaderInfo;
+			var loader:Loader=loaderInfo.loader;
+			var bitmap:Bitmap=loaderInfo.content as Bitmap;
+			
+			for(var i:int=1;i<_tabs.length;i++){
+				if(_tabs[i].Normal==loader){
+					var bmp:Bitmap=new Bitmap(bitmap.bitmapData); bmp.smoothing=true; bmp.alpha=0.4;
+					var bmp_on:Bitmap=new Bitmap(bitmap.bitmapData); bmp_on.smoothing=true;
+					
+					_tabs[i].Normal=bmp;
+					_tabs[i].Down=bmp_on;
+					_tabs[i].Tabbed=bmp_on;
+					break;
+				}
+			}
+			
+			loader.contentLoaderInfo.removeEventListener(Event.COMPLETE,onTabLoadComplete);
+			loader.unload();
+			
+			onResize();
+		}
+		
+		private function onResize():void{
+			for(var i:int=0;i<_tabs.length;i++){
+				if(i==0)
+					_tabs[i].x=10;
+				else 
+					_tabs[i].x=_tabs[i-1].x+_tabs[i-1].width+10;
+				_tabs[i].y=_bg.height-58/2-_tabs[i].height/2;
+				
+				_tabs[i].removeEventListener(MouseEvent.CLICK,onTabbed);
+				_tabs[i].addEventListener(MouseEvent.CLICK,onTabbed);
+				
+				addChild(_tabs[i]);
+			}
+		}
+		
+		private function onTabbed(e:MouseEvent):void{
+			for(var i:int=0;i<_tabs.length;i++){
+				if(_tabs[i]==e.currentTarget){
+					setTab(i);
+					break;
+				}
+			}
+		}
+		
+		public function setTab(tab:int):void{
+			if(tab==_currentTab) return;
+			
+			if(_pageMoveTween){
+				_pageMoveTween.endTween();
+				_pageMoveTween=null;
+			}
+			
+			if(_currentTab>=0) _tabs[_currentTab].isTabbed=false;
+			_tabs[tab].isTabbed=true;
+			
+			_iconCol=4; _iconRow=2;
+			_iconCount=_iconCol*_iconRow;
+			if(tab==1){
+				_iconCol=6; _iconRow=3;
+				_iconCount=(_iconCol*_iconRow)-1;
+			}
+			
+			_iconWidth=_bg.width*0.95/_iconCol;
+			_iconHeight=(_bg.height-58-58)*0.95/_iconRow;
+			_iconX=_bg.width/2-(_iconWidth*_iconCol)/2;
+			_iconY=0;//(_bg.height-58-58)/2-(_iconHeight*_iconRow)/2;
+			
+			
+			_pageDot.removeChildren();
+			for(var i:int=0;i<Math.ceil(_tabEmoticons[tab].length/_iconCount);i++){
+				var bmp:Bitmap=new PAGE_DOT; bmp.smoothing=true;
+				var bmp_on:Bitmap=new PAGE_DOT_ON; bmp_on.smoothing=true;
+				
+				var dot:TabbedButton=new TabbedButton(bmp,bmp,bmp_on);
+				dot.x=i*20;
+				_pageDot.addChild(dot);
+			}
+			_pageDot.x=_bg.width/2-_pageDot.width/2;
+			_pageDot.y=58/2-_pageDot.height/2;
+			
+			_currentTab=tab;
+			_currentPage=-1;
+			setPage(0);
+		}
+		
+		public function setPage(page:int,obj:Sprite=null):int{
+			if(obj==null) obj=_page;
+			
+			if(page<0) page=_pageDot.numChildren+page;
+			if(page>=_pageDot.numChildren) page=page-_pageDot.numChildren;
+			
+			if(obj==_page && page==_currentPage) return page;
+			
+			obj.removeChildren();
+			
+			var i:int,j:int;
+			for(i=0;i<_iconRow;i++){
+				for(j=0;j<_iconCol;j++){
+					var idx:int=page*_iconCount+i*_iconCol+j;
+					if(idx>=_tabEmoticons[_currentTab].length || idx<0 || i*_iconCol+j>=_iconCount) break;
+					
+					var loader:Loader=new Loader;
+					loader.load(new URLRequest(_tabEmoticons[_currentTab][idx]));
+					loader.contentLoaderInfo.addEventListener(Event.COMPLETE,onIconLoadComplete);
+					loader.x=_iconX+j*_iconWidth;
+					loader.y=_iconY+i*_iconHeight;
+					loader.addEventListener(MouseEvent.CLICK,icon_onClick);
+					obj.addChild(loader);
+				}
+				if(j<_iconCol) break;
+			}
+			
+			if(_currentTab==1){
+				var bmp:Bitmap=new BACKSPACE; bmp.smoothing=true;
+				bmp.width=_iconWidth*0.8;
+				bmp.height=_iconHeight*0.8;
+				if(bmp.scaleX<bmp.scaleY) bmp.scaleY=bmp.scaleX;
+				else bmp.scaleX=bmp.scaleY;
+				bmp.x=_iconX+(_iconCol-1)*_iconWidth+_iconWidth/2-bmp.width/2;
+				bmp.y=_iconY+(_iconRow-1)*_iconHeight+_iconHeight/2-bmp.height/2;
+				
+				var sprite:Sprite=new Sprite;
+				sprite.addChild(bmp);
+				sprite.addEventListener(MouseEvent.CLICK,icon_onClick);
+				obj.addChild(sprite);
+			}
+			
+			if(obj==_page){
+				if(_currentPage>=0 && _currentPage<_pageDot.numChildren) (_pageDot.getChildAt(_currentPage) as TabbedButton).isTabbed=false;
+				if(page<_pageDot.numChildren) (_pageDot.getChildAt(page) as TabbedButton).isTabbed=true;
+				_currentPage=page;
+				
+				_prevPage.visible=false;
+				_nextPage.visible=false;
+				if(_pageDot.numChildren>1){
+					setPage(page-1,_prevPage);
+					setPage(page+1,_nextPage);
+				}
+			}
+			return page;
+		}
+		
+		private function onIconLoadComplete(e:Event):void{
+			var loaderInfo:LoaderInfo=e.currentTarget as LoaderInfo;
+			var loader:Loader=loaderInfo.loader;
+			var bitmap:Bitmap=loaderInfo.content as Bitmap;
+			
+			bitmap.smoothing=true;
+			loader.width=_iconWidth*0.8;
+			loader.height=_iconHeight*0.8;
+			if(loader.scaleX<loader.scaleY) loader.scaleY=loader.scaleX;
+			else loader.scaleX=loader.scaleY;
+			loader.x+=_iconWidth/2-loader.width/2;
+			loader.y+=_iconHeight/2-loader.height/2;
+
+			loader.contentLoaderInfo.removeEventListener(Event.COMPLETE,onIconLoadComplete);
+		}
+		
+		private function onMouseDown(e:MouseEvent):void{
+			if(_pageMoveTween){
+				_pageMoveTween.endTween();
+				_pageMoveTween=null;
+			}
+			
+			if(_pageDot.numChildren<=1)
+				return;
+			
+			_dragStart.x=_this.mouseX; _dragStart.y=_this.mouseY;
+			_dragCurrent.x=_this.mouseX; _dragCurrent.y=_this.mouseY;
+			_dragMovement.x=0; _dragMovement.y=0;
+			_isDrag=true;
+			
+			_prevPage.visible=false;
+			_nextPage.visible=false;
+			
+			stage.addEventListener(MouseEvent.MOUSE_MOVE,onMouseMove);
+			stage.addEventListener(MouseEvent.MOUSE_UP,onMouseUp);
+			onMouseMove(null);
+		}
+		private function onMouseMove(e:MouseEvent):void{
+			if(_isDrag){				
+				var moveX:Number=_dragStart.x-_dragCurrent.x;
+				_dragMovement.x=_dragCurrent.x-_this.mouseX;
+				_dragMovement.y=_dragCurrent.y-_this.mouseY;
+				
+				if(_dragStart.y<_bg.height-58){
+					//이모티콘
+					_page.x=-moveX;
+					
+					if(moveX>0){
+						_nextPage.visible=true;
+						_nextPage.x=_page.x+_bg.width;
+					}
+					else if(moveX<0){
+						_prevPage.visible=true;
+						_prevPage.x=_page.x-_bg.width;
+					}
+					else{
+						_prevPage.visible=false;
+						_nextPage.visible=false;
+					}
+				}
+				else{
+					//탭
+				}
+				
+				_dragCurrent.x=_this.mouseX;
+				_dragCurrent.y=_this.mouseY;
+			}
+		}
+		private function onMouseUp(e:MouseEvent):void{
+			if(_isDrag){	
+				var moveX:Number=_dragStart.x-_dragCurrent.x;
+				
+				if(_dragStart.y<_bg.height-58){
+					//이모티콘
+					if(Math.abs(_dragMovement.x)>=20 && Math.abs(moveX)<_bg.width/2){
+						if(
+							moveX/Math.abs(moveX)==_dragMovement.x/Math.abs(_dragMovement.x) //부호가 똑같거나
+							|| Math.abs(moveX)<=Math.abs(_dragMovement.x) //이동한 값보다 플리킹 값이 더 클 경우
+						){
+							moveX=_dragMovement.x/Math.abs(_dragMovement.x)*_bg.width;
+						}
+					}
+					if(Math.abs(moveX)>=_bg.width/2){
+						if(_currentPage>=0 && _currentPage<_pageDot.numChildren) (_pageDot.getChildAt(_currentPage) as TabbedButton).isTabbed=false;
+						
+						var tmp:Sprite;
+						if(moveX>0){
+							tmp=_prevPage;
+							_prevPage=_page;
+							_page=_nextPage;
+							_nextPage=tmp;
+							_nextPage.removeChildren();
+							
+							_currentPage=(_currentPage+1)%_pageDot.numChildren;
+						}
+						else if(moveX<0){
+							tmp=_nextPage;
+							_nextPage=_page;
+							_page=_prevPage;
+							_prevPage=tmp;
+							_prevPage.removeChildren();
+							
+							_currentPage--;
+							if(_currentPage<0) _currentPage=_pageDot.numChildren-1;
+						}
+						
+						if(_currentPage<_pageDot.numChildren) (_pageDot.getChildAt(_currentPage) as TabbedButton).isTabbed=true;
+					}
+					
+					if(_pageMoveTween){
+						_pageMoveTween.endTween();
+						_pageMoveTween=null;
+					}
+					if(_page.x!=0){
+						_pageMoveTween=new Tween(_page.x,0,0,200,function(value:Number,isFinish:Boolean):void{
+							_page.x=value;
+							if(_nextPage.visible) _nextPage.x=_page.x+_bg.width;
+							if(_prevPage.visible) _prevPage.x=_page.x-_bg.width;
+							
+							if(isFinish){
+								_page.visible=true;
+								_prevPage.visible=false;
+								_nextPage.visible=false;
+								
+								if(_pageDot.numChildren>1){
+									if(_nextPage.numChildren==0) 
+										setPage(_currentPage+1,_nextPage);
+									if(_prevPage.numChildren==0) 
+										setPage(_currentPage-1,_prevPage);
+								}
+							}
+						});
+						
+						_prevPage.visible=(_page.x>0);
+						_nextPage.visible=(_page.x<0);
+					}
+					_page.visible=true;
+				}
+				else{
+					//탭
+				}
+			}
+			_isDrag=false;
+			stage.removeEventListener(MouseEvent.MOUSE_MOVE,onMouseMove);
+			stage.removeEventListener(MouseEvent.MOUSE_UP,onMouseUp);
+		}
+		
+		private function icon_onClick(e:MouseEvent):void{
+			var obj:DisplayObject=e.currentTarget as DisplayObject;
+			
+			if(obj.parent==_page){
+				var idx:int=_currentPage*_iconCount+_page.getChildIndex(obj);
+				if(_currentTab==1 && _page.getChildIndex(obj)==17){
+					//BACKSPACE
+					_onSelectCallback(null);
+				}
+				else{
+					_onSelectCallback((obj as Loader).contentLoaderInfo.url);
+				}
+			}
+		}
+		
+		public static function covertLocalPathToId(url:String):String{
+			var baseDir:File=File.applicationDirectory.resolvePath(EMOTICON_PATH);
+			if(url.substr(0,baseDir.url.length)!=baseDir.url){
+				throw new Error("변환 불가능한 URL입니다.");
+			}
+			return url.substr(baseDir.url.length);
+		}
+		
+		public static function covertIdToURL(id:String):String{
+			id=id.replace(/%25/g,"%");
+			id=id.replace(/%26/g,"&");
+			var file:File=File.applicationDirectory.resolvePath(EMOTICON_PATH+id);
+			if(file.exists){
+				return file.url;
+			}
+			return id;
+		}
+	}
+}

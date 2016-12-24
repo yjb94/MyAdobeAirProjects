@@ -1,0 +1,159 @@
+package Page.Calendar
+{
+	import flash.display.Bitmap;
+	import flash.display.DisplayObject;
+	import flash.display.Sprite;
+	import flash.events.Event;
+	import flash.events.MouseEvent;
+	
+	import kr.pe.hs.ui.TabbedButton;
+	
+	public class StickerPicker extends Sprite
+	{
+		[Embed(source = "assets/page/calendar/stickers/1.png")]
+		private static const STICKER_1:Class;
+		[Embed(source = "assets/page/calendar/stickers/2.png")]
+		private static const STICKER_2:Class;
+		[Embed(source = "assets/page/calendar/stickers/3.png")]
+		private static const STICKER_3:Class;
+		[Embed(source = "assets/page/calendar/stickers/4.png")]
+		private static const STICKER_4:Class;
+		[Embed(source = "assets/page/calendar/stickers/5.png")]
+		private static const STICKER_5:Class;
+		[Embed(source = "assets/page/calendar/stickers/6.png")]
+		private static const STICKER_6:Class;
+		[Embed(source = "assets/page/calendar/stickers/7.png")]
+		private static const STICKER_7:Class;
+		[Embed(source = "assets/page/calendar/stickers/8.png")]
+		private static const STICKER_8:Class;
+		[Embed(source = "assets/page/calendar/stickers/9.png")]
+		private static const STICKER_9:Class;
+		[Embed(source = "assets/page/calendar/stickers/10.png")]
+		private static const STICKER_10:Class;
+		[Embed(source = "assets/page/calendar/stickers/11.png")]
+		private static const STICKER_11:Class;
+		[Embed(source = "assets/page/calendar/stickers/12.png")]
+		private static const STICKER_12:Class;
+		
+		private static const _Stickers:Vector.<Class>=Vector.<Class>([
+			STICKER_1,STICKER_2,STICKER_3,STICKER_4
+			,STICKER_5,STICKER_6,STICKER_7,STICKER_8
+			,STICKER_9,STICKER_10,STICKER_11,STICKER_12
+		]);
+		public static function get Stickers():Vector.<Class>{ return _Stickers; }
+		
+		
+		[Embed(source = "assets/page/calendar/picker/sticker_area.png")]
+		private static const STICKER_AREA:Class;
+		
+		private var _stickerArea:Sprite;
+		
+		
+		[Embed(source = "assets/page/calendar/picker/button_more.png")]
+		private static const BUTTON_MORE:Class;
+		
+		private var _buttonMore:TabbedButton;
+		
+		
+		private var _isOpened:Boolean;
+		private var _selectedSticker:Class;
+		public function get SelectedSticker():Class{ return _selectedSticker; }
+		public function set SelectedSticker(value:Class):void{ _selectedSticker=value; }
+		private var _selectedStickerBitmap:Bitmap;
+		
+		public function StickerPicker()
+		{
+			super();
+			
+			_isOpened=false;
+			
+			_stickerArea=new Sprite;
+			var bmpArea:Bitmap=new STICKER_AREA; bmpArea.smoothing=true;
+			_stickerArea.addChild(bmpArea);
+			_stickerArea.y=7;
+			
+			if(_Stickers.length>4){
+				var bmpButtonMore:Bitmap=new BUTTON_MORE; bmpButtonMore.smoothing=true;
+				var bmpButtonMore_down:Bitmap=new BUTTON_MORE; bmpButtonMore_down.smoothing=true;
+				var bmpButtonMore_tabbed:Bitmap=new BUTTON_MORE; bmpButtonMore_tabbed.smoothing=true;
+				bmpButtonMore_tabbed.scaleY=-1;
+				bmpButtonMore_tabbed.y=bmpButtonMore_tabbed.height;
+				_buttonMore=new TabbedButton(bmpButtonMore,bmpButtonMore_down,bmpButtonMore_tabbed);
+				_buttonMore.x=(_stickerArea.width+13)+406-_buttonMore.width;
+				_buttonMore.y=7;
+				_buttonMore.addEventListener(MouseEvent.CLICK,more_onClick);
+				addChild(_buttonMore);
+			}
+			
+			invalidate();
+		}
+		
+		private function invalidate():void{
+			while(numChildren!=0) removeChildAt(0);
+			addChild(_stickerArea);
+			if(_buttonMore) addChild(_buttonMore);
+			
+			var len:int=4;
+			if(_isOpened) len=_Stickers.length;
+			for(var i:int=0;i<len;i++){
+				var bmp:Bitmap=new _Stickers[i];
+				var sprite:Sprite=new Sprite;
+				bmp.smoothing=true;
+				
+				if(_buttonMore){
+					sprite.x=(_stickerArea.width+13)+20+94*(i%4);
+				}
+				else{
+					sprite.x=(_stickerArea.width+13)+20+99*(i%4);
+				}
+				sprite.y=7+78*Math.floor(i/4);
+				sprite.addChild(bmp);
+				sprite.buttonMode=true;
+				sprite.addEventListener(MouseEvent.CLICK,sticker_onClick,false,0,true);
+				addChild(sprite);
+			}
+			
+			graphics.clear();
+			graphics.beginFill(0xececec);
+			if(_buttonMore && _isOpened){
+				graphics.drawRoundRect((_stickerArea.width+13),7,406,78*Math.ceil(len/4),20,20);
+			}
+			else{
+				graphics.drawRoundRect((_stickerArea.width+13),7,406,64*Math.ceil(len/4),20,20);
+			}
+			graphics.endFill();
+			
+			if(_selectedStickerBitmap){
+				_selectedStickerBitmap.x=_stickerArea.width/2-_selectedStickerBitmap.width/2
+				_selectedStickerBitmap.y=_stickerArea.height/2-_selectedStickerBitmap.height/2
+				_stickerArea.addChild(_selectedStickerBitmap);
+			}
+		}
+		
+		private function more_onClick(e:MouseEvent):void{
+			_isOpened=!_isOpened;
+			_buttonMore.isTabbed=_isOpened;
+			invalidate();
+			dispatchEvent(new Event(Event.RESIZE));
+		}
+		
+		private function sticker_onClick(e:MouseEvent):void{
+			if(_buttonMore){
+				_selectedSticker=Stickers[getChildIndex(e.currentTarget as DisplayObject)-2];
+			}
+			else{
+				_selectedSticker=Stickers[getChildIndex(e.currentTarget as DisplayObject)-1];
+			}
+			if(_selectedStickerBitmap){
+				_stickerArea.removeChild(_selectedStickerBitmap);
+				_selectedStickerBitmap=null;
+			}
+			if(_selectedSticker){
+				_selectedStickerBitmap=new _selectedSticker;
+				_selectedStickerBitmap.smoothing=true;
+			}
+			invalidate();
+			dispatchEvent(new Event(Event.CHANGE));
+		}
+	}
+}
